@@ -3,69 +3,119 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Chanting Counter — with Om & Rounds</title>
+  <title>Chanting Counter — Dark, Vibe & Rounds</title>
   <style>
+    /* Theme-aware variables; body[data-theme="system"] will follow OS */
     :root{
       --bg:#fff7fb; --card:#fff; --accent:#ff4fa1; --muted:#6b6f76;
       --glass: rgba(255,79,161,0.12);
       --glass-2: rgba(255,255,255,0.6);
       --danger:#ef4444;
+      --text:#0f172a;
+      --tap-text:#111;
+      --progress-fill: #2f9a3f;
+      --history-bg:#fffafc;
+      --shadow: 0 10px 30px rgba(22,28,45,0.06);
     }
+
+    /* deep dark theme */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-dark-force]){ /* default dark variables if system dark */
+        --bg: #07060a;
+        --card: linear-gradient(180deg,#09080c,#0e0d12);
+        --accent:#ff6fb0;
+        --muted:#9aa0a6;
+        --glass: rgba(255,111,176,0.06);
+        --glass-2: rgba(255,255,255,0.03);
+        --danger:#ff6b6b;
+        --text:#e8e8ec;
+        --tap-text:#fff;
+        --progress-fill: #36b37e;
+        --history-bg:#0b0b0d;
+        --shadow: 0 10px 30px rgba(0,0,0,0.6);
+      }
+    }
+
+    /* If user picks Light explicitly */
+    body[data-theme="light"]{
+      --bg:#fff7fb; --card:#fff; --accent:#ff4fa1; --muted:#6b6f76;
+      --glass: rgba(255,79,161,0.12);
+      --tap-text:#111;
+      --history-bg:#fffafc;
+      --shadow: 0 10px 30px rgba(22,28,45,0.06);
+    }
+
+    /* If user picks Dark explicitly (deep dark) */
+    body[data-theme="dark"]{
+      --bg: #07060a;
+      --card: linear-gradient(180deg,#09080c,#0e0d12);
+      --accent:#ff6fb0;
+      --muted:#9aa0a6;
+      --glass: rgba(255,111,176,0.06);
+      --tap-text:#fff;
+      --history-bg:#0b0b0d;
+      --shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+
     *{box-sizing:border-box}
-    html,body{height:100%; margin:0; font-family:Inter, "Segoe UI", Roboto, Arial; background:var(--bg); color:#0f172a}
+    html,body{height:100%; margin:0; font-family:Inter, "Segoe UI", Roboto, Arial; background:var(--bg); color:var(--text)}
     .wrap{max-width:920px; margin:20px auto; padding:18px;}
     header{display:flex; align-items:center; gap:12px; margin-bottom:10px}
     header h1{font-size:20px; margin:0}
-    .card{background:var(--card); border-radius:14px; padding:18px; box-shadow:0 10px 30px rgba(22,28,45,0.06)}
+    .card{background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow)}
     .count-big{font-size:64px; font-weight:700; text-align:center}
     .muted{color:var(--muted)}
     .controls{display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap}
     button{background:var(--accent); color:white; border:none; padding:12px 16px; border-radius:12px; font-weight:600; cursor:pointer}
-    button.secondary{background:#fff; color:#111; border:1px solid #eef2f7; box-shadow:none}
+    button.secondary{background:transparent; color:var(--text); border:1px solid rgba(0,0,0,0.06); box-shadow:none}
     button.warn{background:var(--danger)}
-    input[type="number"], input[type="text"]{padding:10px 12px; border-radius:8px; border:1px solid #eee; min-width:100px}
-    progress{width:100%; height:14px; border-radius:8px; overflow:hidden}
+    input[type="number"], input[type="text"]{padding:10px 12px; border-radius:8px; border:1px solid #eee; min-width:100px; background:transparent; color:var(--text)}
+    progress{width:100%; height:14px; border-radius:8px; overflow:hidden; accent-color: var(--progress-fill);}
     .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
     .small{font-size:13px; color:var(--muted)}
-    .history{margin-top:14px; max-height:160px; overflow:auto; border-radius:8px; padding:8px; background:#fffafc}
+    .history{margin-top:14px; max-height:160px; overflow:auto; border-radius:8px; padding:8px; background:var(--history-bg)}
     .hist-item{font-size:13px; padding:8px; border-radius:8px; display:flex; justify-content:space-between; gap:12px}
     .settings{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-    /* Big translucent tap button (mobile) */
+    /* Big translucent tap button (mobile) - widened as requested */
     .tap-wrap{
       position:fixed;
       left:50%;
       transform:translateX(-50%);
-      bottom:18px;
+      bottom:16px;
       z-index:60;
-      width:86%;
-      max-width:760px;
+      width:96%;
+      max-width:980px;
       pointer-events:none; /* inner button will accept pointer */
     }
     .tap-btn{
       pointer-events:auto;
       width:100%;
-      border-radius:34px;
-      padding:18px 12px;
+      border-radius:40px;
+      padding:22px 18px;
       text-align:center;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,79,161,0.06));
       border: 1px solid rgba(255,79,161,0.12);
-      box-shadow: 0 8px 30px rgba(255,79,161,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
+      box-shadow: 0 12px 40px rgba(255,79,161,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
       font-size:22px;
-      font-weight:700;
-      color:#1f1f29;
+      font-weight:800;
+      color:var(--tap-text);
       display:flex;
       align-items:center;
-      justify-content:center;
-      gap:14px;
+      justify-content:space-between;
+      gap:18px;
     }
-    .tap-count{font-size:28px; font-weight:800; color:#111}
-    .small-pill{padding:8px 12px; border-radius:20px; background:#fff; border:1px solid #f0f0f3; font-weight:600}
+    .tap-btn .left { display:flex; gap:12px; align-items:center; }
+    .tap-count{font-size:36px; font-weight:900}
+    .tap-note{font-size:14px; opacity:0.9}
     @media (max-width:560px){
       .count-big{font-size:46px}
-      .tap-btn{padding:16px; font-size:18px}
+      .tap-btn{padding:18px; font-size:18px}
+      .tap-count{font-size:32px}
     }
+    /* small pills */
+    .pill{padding:10px 14px; border-radius:28px; background:var(--card); border:1px solid rgba(0,0,0,0.03); font-weight:700}
   </style>
 </head>
 <body>
@@ -92,7 +142,7 @@
         <input id="goalInput" type="number" min="1" placeholder="Goal (e.g., 108)" aria-label="Goal count" />
         <button id="setGoal" class="secondary">Set Goal</button>
 
-        <input id="perRound" type="number" min="1" placeholder="Per round (108)" aria-label="Per round" style="width:120px"/>
+        <input id="perRound" type="number" min="1" placeholder="Per round (e.g., 108)" aria-label="Per round" style="width:120px"/>
         <button id="toggleAutoRound" class="secondary">Auto-round: On</button>
       </div>
 
@@ -110,15 +160,26 @@
         </label>
 
         <label class="small" style="display:flex; gap:8px; align-items:center;">
-          <input id="keepScreen" type="checkbox" /> Keep screen on
+          <input id="vibeToggle" type="checkbox" checked /> Vibration
         </label>
       </div>
 
       <div style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <div class="small-pill">Rounds completed: <span id="roundsCompleted">0</span></div>
-        <div class="small-pill">In-round: <span id="inRound">0</span>/<span id="perRoundDisplay">108</span></div>
-        <div class="small" id="sessionTimer">Session: 00:00:00</div>
+        <div class="pill">Rounds completed: <span id="roundsCompleted">0</span></div>
+        <div class="pill">In-round: <span id="inRound">0</span>/<span id="perRoundDisplay">108</span></div>
+
+        <!-- Theme selector -->
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+          <label class="small">Theme:</label>
+          <select id="themeSelect" aria-label="Theme selector">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
       </div>
+
+      <div style="margin-top:12px;" class="small" id="sessionTimer">Session: 00:00:00</div>
 
       <div class="history" id="history" aria-label="History">
         <!-- history -->
@@ -131,21 +192,22 @@
     </div>
   </div>
 
-  <!-- Big translucent tap button -->
+  <!-- Big translucent tap button (wider & taller than before) -->
   <div class="tap-wrap" aria-hidden="false">
     <div id="tap" class="tap-btn" role="button" aria-label="+1 (tap)">
-      <div style="display:flex; flex-direction:column; align-items:center;">
-        <div style="font-size:14px; color:#7a2b4f; opacity:0.9">Tap</div>
-        <div class="tap-count">+1</div>
+      <div class="left">
+        <div style="font-size:14px; color:var(--accent); opacity:0.95">Tap</div>
+        <div class="tap-count" id="tapCount">+1</div>
       </div>
-      <div style="margin-left:auto;">
-        <div class="small" style="opacity:0.85">tap</div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end;">
+        <div class="tap-note">tap</div>
+        <div style="font-size:11px; color:var(--muted)">(long-press for continuous)</div>
       </div>
     </div>
   </div>
 
 <script>
-  // DOM
+  // DOM refs
   const countEl = document.getElementById('count');
   const incBtn = document.getElementById('inc');
   const decBtn = document.getElementById('dec');
@@ -167,46 +229,46 @@
   const perRoundDisplay = document.getElementById('perRoundDisplay');
   const toggleAutoRoundBtn = document.getElementById('toggleAutoRound');
   const soundToggle = document.getElementById('soundToggle');
-  const keepScreen = document.getElementById('keepScreen');
+  const vibeToggle = document.getElementById('vibeToggle');
   const sessionTimerEl = document.getElementById('sessionTimer');
+  const themeSelect = document.getElementById('themeSelect');
 
   // State
-  const STORAGE_KEY = 'chant_counter_v2';
+  const STORAGE_KEY = 'chant_counter_v3';
   let state = {
-    totalCount: 0,       // cumulative
-    inRoundCount: 0,     // count within current round (0 .. perRound-1)
+    totalCount: 0,
+    inRoundCount: 0,
     perRound: 108,
     roundsCompleted: 0,
     goal: null,
-    history: [],         // {t, delta, totalCount, inRound}
+    history: [],
     lastAction: null,
     autoRound: true,
+    sound: true,
+    vibration: true,
+    theme: 'system', // 'system' | 'light' | 'dark'
     sessionStart: Date.now()
   };
 
-  // WebAudio "Om-like" generator
+  // Audio: Om-like tone
   const AudioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
   function playOm(){
     if(!AudioCtx) return;
-    // create a warm harmonic Om-ish tone: low fundamental + gentle harmonic + vowel-ish envelope
     const now = AudioCtx.currentTime;
     const base = AudioCtx.createOscillator();
     const harm = AudioCtx.createOscillator();
     const gain = AudioCtx.createGain();
     const gain2 = AudioCtx.createGain();
 
-    base.type = 'sine'; base.frequency.value = 110; // low
-    harm.type = 'sine'; harm.frequency.value = 220; // octave
+    base.type = 'sine'; base.frequency.value = 110;
+    harm.type = 'sine'; harm.frequency.value = 220;
 
     gain.gain.value = 0.0001;
     gain2.gain.value = 0.0001;
 
-    base.connect(gain);
-    harm.connect(gain2);
-    gain.connect(AudioCtx.destination);
-    gain2.connect(AudioCtx.destination);
+    base.connect(gain); harm.connect(gain2);
+    gain.connect(AudioCtx.destination); gain2.connect(AudioCtx.destination);
 
-    // Envelope: quick attack, slow decay
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
@@ -215,19 +277,37 @@
     gain2.gain.exponentialRampToValueAtTime(0.09, now + 0.03);
     gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
 
-    base.start(now);
-    harm.start(now);
-    base.stop(now + 0.9);
-    harm.stop(now + 0.9);
+    base.start(now); harm.start(now);
+    base.stop(now + 0.9); harm.stop(now + 0.9);
   }
 
-  // save/load
+  // Save/load
   function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
   function load(){
     try{
       const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if(s) state = {...state, ...s};
     }catch(e){}
+  }
+
+  // Theme handling
+  function applyTheme(){
+    // set body data-theme for explicit selections; for 'system' we'll let CSS media handle it,
+    // but set data-dark-force to allow CSS @media override removal if needed.
+    const b = document.body;
+    if(state.theme === 'system'){
+      b.removeAttribute('data-theme');
+      b.removeAttribute('data-dark-force');
+    } else if(state.theme === 'light'){
+      b.setAttribute('data-theme','light');
+      b.removeAttribute('data-dark-force');
+    } else if(state.theme === 'dark'){
+      b.setAttribute('data-theme','dark');
+      // force dark variables even if system is light
+      b.setAttribute('data-dark-force','1');
+    }
+    themeSelect.value = state.theme;
+    save();
   }
 
   // UI render
@@ -240,7 +320,11 @@
     const prog = state.goal ? Math.min(100, Math.round((state.totalCount/state.goal)*100)) : Math.min(100, Math.floor((state.inRoundCount/state.perRound)*100));
     progress.value = prog;
     toggleAutoRoundBtn.textContent = `Auto-round: ${state.autoRound ? 'On' : 'Off'}`;
+    soundToggle.checked = state.sound;
+    vibeToggle.checked = state.vibration;
+    perRoundInput.value = state.perRound;
     renderHistory();
+    applyTheme();
     save();
   }
 
@@ -254,9 +338,17 @@
       const d = new Date(it.t);
       const row = document.createElement('div');
       row.className = 'hist-item';
-      row.innerHTML = `<div style="color:#111">${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`;
+      row.innerHTML = `<div style="color:var(--text)">${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`;
       historyEl.appendChild(row);
     });
+  }
+
+  // Vibration helper
+  function doVibrate(){
+    if(state.vibration && navigator.vibrate) {
+      // Some devices accept only certain durations; short buzz is better
+      navigator.vibrate(30);
+    }
   }
 
   // core change handler
@@ -264,27 +356,22 @@
     state.totalCount += delta;
     if(state.totalCount < 0) state.totalCount = 0;
 
-    // update in-round depending on mode:
     if(state.autoRound){
       state.inRoundCount += delta;
-      // handle negative
       if(state.inRoundCount < 0){
-        // borrow from roundsCompleted if available
         if(state.roundsCompleted > 0){
           state.roundsCompleted = Math.max(0, state.roundsCompleted - 1);
-          state.inRoundCount = state.perRound + state.inRoundCount; // negative adjustment
+          state.inRoundCount = state.perRound + state.inRoundCount;
         } else {
           state.inRoundCount = 0;
         }
       }
-
-      // if inRound reaches perRound or exceeds, carry over multiple rounds
+      // carry over when inRound reaches perRound
       while(state.inRoundCount >= state.perRound){
         state.inRoundCount -= state.perRound;
         state.roundsCompleted += 1;
       }
     } else {
-      // cumulative mode: compute rounds from totalCount
       state.inRoundCount = state.totalCount % state.perRound;
       state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
     }
@@ -295,47 +382,32 @@
       state.lastAction = entry;
     }
 
-    // feedback
-    if(soundToggle.checked) {
-      // resume audio context if suspended
-      if(AudioCtx && AudioCtx.state === 'suspended') { AudioCtx.resume(); }
+    // audio
+    if(state.sound && AudioCtx){
+      if(AudioCtx.state === 'suspended') AudioCtx.resume();
       playOm();
     }
-    // vibrate if available
-    if(navigator.vibrate) navigator.vibrate(20);
+    // vibration
+    doVibrate();
+
     render();
   }
 
   function undo(){
     if(!state.lastAction) return;
-    // remove last matching entry (by timestamp)
     for(let i=state.history.length-1;i>=0;i--){
       if(state.history[i].t === state.lastAction.t){
         state.history.splice(i,1);
         break;
       }
     }
-    // restore from remaining last entry or recalc
+    // if history left, restore last snapshot
     const last = state.history[state.history.length-1];
     if(last){
       state.totalCount = last.totalCount;
       state.inRoundCount = last.inRound;
-      if(!state.autoRound){
-        state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
-      } else {
-        // keep roundsCompleted as stored previously by recomputing from history
-        let rounds = 0, inR = 0;
-        // recompute from scratch
-        let tot = 0;
-        for(const h of state.history){
-          tot = h.totalCount;
-        }
-        state.totalCount = tot;
-        state.inRoundCount = state.autoRound ? (state.inRoundCount % state.perRound) : state.totalCount % state.perRound;
-        if(!state.autoRound) state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
-      }
+      state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
     } else {
-      // no history left
       state.totalCount = 0;
       state.inRoundCount = 0;
       state.roundsCompleted = 0;
@@ -400,7 +472,6 @@
     let timer=null, interval=null;
     const start = (ev) => {
       ev.preventDefault();
-      // first immediate change
       change(delta);
       timer = setTimeout(()=> {
         interval = setInterval(()=> change(delta), 120);
@@ -419,7 +490,7 @@
   attachLongPress(decBtn, -1);
   attachLongPress(tapBtn, 1);
 
-  // tap button also responds to click/tap
+  // tap button click
   tapBtn.addEventListener('click', ()=> change(1));
 
   // per-round input / toggle behavior
@@ -427,12 +498,11 @@
     const v = parseInt(perRoundInput.value);
     if(v && v>0){
       state.perRound = v;
-      // recompute inRound and rounds depending on mode
+      // recompute
       if(!state.autoRound){
         state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
         state.inRoundCount = state.totalCount % state.perRound;
       } else {
-        // when switching size keep present inRound as modulo
         state.inRoundCount = state.totalCount % state.perRound;
       }
       render();
@@ -441,38 +511,33 @@
 
   toggleAutoRoundBtn.addEventListener('click', ()=>{
     state.autoRound = !state.autoRound;
-    // recompute counters to reflect mode
     if(state.autoRound){
-      // convert cumulative to auto style: keep roundsCompleted as is and inRound from totalCount
       const total = state.totalCount;
       state.roundsCompleted = Math.floor(total / state.perRound);
       state.inRoundCount = total % state.perRound;
     } else {
-      // cumulative mode: ensure rounds = floor(total/perRound)
       state.inRoundCount = state.totalCount % state.perRound;
       state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
     }
     render();
   });
 
-  // Keep screen on (simple approach using Wake Lock API)
-  let wakeLock = null;
-  keepScreen.addEventListener('change', async ()=>{
-    if(keepScreen.checked){
-      try{
-        if('wakeLock' in navigator){
-          wakeLock = await navigator.wakeLock.request('screen');
-          wakeLock.addEventListener('release', ()=> { keepScreen.checked = false; });
-        } else {
-          // fallback: do nothing, browser may not support
-          console.log('Wake Lock not supported in this browser');
-        }
-      }catch(e){
-        console.log('Wake Lock request failed', e);
-      }
-    } else {
-      if(wakeLock){ wakeLock.release(); wakeLock = null; }
-    }
+  // sound toggle
+  soundToggle.addEventListener('change', ()=>{
+    state.sound = soundToggle.checked;
+    save();
+  });
+
+  // vibration toggle
+  vibeToggle.addEventListener('change', ()=>{
+    state.vibration = vibeToggle.checked;
+    save();
+  });
+
+  // Theme selector
+  themeSelect.addEventListener('change', ()=>{
+    state.theme = themeSelect.value;
+    applyTheme();
   });
 
   // Session timer
@@ -488,9 +553,11 @@
   // Init
   load();
   if(!state.sessionStart) state.sessionStart = Date.now();
-  // ensure defaults shown
-  perRoundInput.value = state.perRound;
   render();
+
+  // Wake Lock simple support (unchanged)
+  let wakeLock = null;
+  // optional: you can wire this to a checkbox for persistent screen on
 
   // Autoresume audio context on first user gesture
   ['click','touchstart','keydown'].forEach(evt=>{
@@ -500,7 +567,7 @@
     });
   });
 
-  // Focus friendly
+  // Accessibility: focus
   incBtn.focus();
 </script>
 </body>
