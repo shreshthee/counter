@@ -4,75 +4,126 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Chanting Counter (Japa Counter)</title>
+  <meta name="description" content="Simple chanting / japa counter — big tap, history, export, local save, rosy glow theme." />
   <style>
+    /* ================== THEME & LAYOUT ================== */
     :root{
-      --bg:#f5f7fb; --card:#fff; --accent:#2b6cb0; --muted:#6b7280;
+      --bg:#fff6fb;           /* rosy page background */
+      --card:#fff;
+      --accent:#ec4899;       /* rosy accent (pink) */
+      --muted:#6b7280;
+      --success:#16a34a;
       --danger:#e53e3e;
     }
     *{box-sizing:border-box}
     html,body{height:100%; margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#0f172a}
-    .wrap{max-width:900px; margin:28px auto; padding:18px;}
+    .wrap{max-width:980px; margin:28px auto; padding:18px;}
     header{display:flex; align-items:center; gap:12px; margin-bottom:18px}
     header h1{font-size:20px; margin:0}
     .card{background:var(--card); border-radius:12px; padding:20px; box-shadow:0 6px 20px rgba(12,18,37,0.06)}
     .counter-row{display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap}
-    .big-display{flex:1; min-width:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; border-radius:10px; background:linear-gradient(180deg,#ffffff,#f2f6ff); box-shadow:inset 0 -2px 6px rgba(11,35,80,0.02)}
+    .big-display{flex:1; min-width:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; border-radius:10px; background:linear-gradient(180deg,#fff7fb,#fff0f6); box-shadow:0 12px 30px rgba(236,72,153,0.08), inset 0 -6px 18px rgba(236,72,153,0.03); border:1px solid rgba(236,72,153,0.06)}
     .count{font-size:64px; font-weight:700; letter-spacing:1px}
     .muted{color:var(--muted); font-size:14px}
     .controls{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:12px}
-    button{background:var(--accent); color:white; border:none; padding:12px 16px; border-radius:10px; font-weight:600; cursor:pointer; box-shadow:0 6px 12px rgba(43,108,176,0.12)}
-    button.secondary{background:#f3f4f6; color:#0f172a; box-shadow:none;}
+    button{background:var(--accent); color:white; border:none; padding:12px 16px; border-radius:10px; font-weight:600; cursor:pointer; box-shadow:0 6px 12px rgba(236,72,153,0.12)}
+    button.secondary{background:#fff; color:#0f172a; box-shadow:0 1px 4px rgba(12,18,37,0.04); border:1px solid rgba(0,0,0,0.04)}
     button.warn{background:var(--danger)}
-    input[type="number"], input[type="text"]{padding:10px 12px; border-radius:8px; border:1px solid #e6eef8; min-width:100px}
-    .goal-row{display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap}
-    progress{width:100%; height:14px; border-radius:8px; overflow:hidden}
+    button.ghost{background:transparent; border:1px solid #e6eef8; color:inherit}
+    input[type="number"], input[type="text"]{padding:10px 12px; border-radius:8px; border:1px solid #f3e8ef; min-width:100px}
+    progress{width:100%; height:14px; border-radius:8px; overflow:hidden; appearance:none}
+    progress::-webkit-progress-bar{background:#fff0f6; border-radius:8px}
+    progress::-webkit-progress-value{background:linear-gradient(90deg,#f472b6,#ec4899); border-radius:8px}
+    progress.success::-webkit-progress-value{background:linear-gradient(90deg,#34d399,#16a34a)}
     .meta{display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap}
     .small{font-size:13px; color:var(--muted)}
-    .history{margin-top:14px; max-height:160px; overflow:auto; border-radius:8px; padding:8px; background:#fbfdff}
-    .hist-item{font-size:13px; padding:6px 8px; border-radius:6px; display:flex; justify-content:space-between; gap:12px}
+    .history{margin-top:14px; max-height:200px; overflow:auto; border-radius:8px; padding:8px; background:#fff7fb}
+    .hist-item{font-size:13px; padding:8px; border-radius:6px; display:flex; justify-content:space-between; gap:12px; align-items:center}
     .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
     .footer{margin-top:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap}
-    @media (max-width:560px){ .count{font-size:48px} header h1{font-size:16px} }
+    .muted-ghost{color:#9aa3b2}
+    .pill{display:inline-flex; gap:8px; align-items:center; padding:6px 8px; border-radius:999px; background:#fff; border:1px solid rgba(0,0,0,0.04); box-shadow:0 2px 6px rgba(236,72,153,0.06)}
+    .focus-ring:focus{outline:3px solid rgba(236,72,153,0.14); outline-offset:2px; border-radius:8px}
+    .visually-hidden{position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden}
+    @media (max-width:560px){ .count{font-size:48px} header h1{font-size:16px} .big-display{padding:18px} }
+
+    /* BIG TAP button (eyes-closed friendly) */
+    .big-tap {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 22px;
+      z-index: 9999;
+      width: min(92%, 650px);
+      height: 88px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(236,72,153,0.16), rgba(236,72,153,0.06));
+      border: 1px solid rgba(236,72,153,0.18);
+      color: #111827;
+      font-weight: 800;
+      font-size: 22px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow: 0 8px 24px rgba(236,72,153,0.12);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .big-tap .label { font-size: 14px; opacity: 0.9; margin-left: 8px; font-weight:600; }
+    .big-tap:active { transform: translateX(-50%) translateY(1px); box-shadow:0 6px 16px rgba(236,72,153,0.14) }
+    .body-bottom-padding { padding-bottom: 120px !important; }
+
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden><path fill="#2b6cb0" d="M12 2L3 20h18L12 2z"></path></svg>
+      <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden><path fill="#ec4899" d="M12 2L3 20h18L12 2z"></path></svg>
       <h1>Chanting Counter</h1>
     </header>
 
     <div class="card" role="application" aria-label="Chanting counter application">
       <div class="counter-row">
+        <!-- LEFT: BIG DISPLAY (Rosy glow ON by default) -->
         <div class="big-display" aria-live="polite">
           <div class="muted">Count</div>
           <div id="count" class="count" aria-atomic="true">0</div>
           <div id="progressText" class="muted small">Goal: —</div>
 
           <div class="controls" style="margin-top:14px;">
-            <button id="dec" aria-label="Decrease by one" class="secondary">−1</button>
-            <button id="inc" aria-label="Increase by one">+1</button>
-            <button id="reset" aria-label="Reset counter" class="warn">Reset</button>
+            <button id="dec" aria-label="Decrease by one" class="secondary focus-ring">−1</button>
+            <button id="inc" aria-label="Increase by one" class="focus-ring">+1</button>
+            <button id="reset" aria-label="Reset counter" class="warn focus-ring">Reset</button>
           </div>
 
           <div class="meta">
             <div class="small">Press <kbd>Space</kbd> to increment</div>
-            <div class="small">Long-press + on mobile for continuous count</div>
+            <div class="small">Press <kbd>Backspace</kbd> to decrement</div>
+            <div class="small">Tap the big button at the bottom for +1</div>
           </div>
         </div>
 
-        <div style="width:320px; min-width:260px;">
+        <!-- RIGHT: Controls, history, export -->
+        <div style="width:340px; min-width:260px;">
           <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-            <input id="goalInput" type="number" min="1" placeholder="Goal (e.g., 108)" aria-label="Goal count" />
-            <button id="setGoal" class="secondary">Set Goal</button>
+            <input id="goalInput" type="number" min="1" placeholder="Goal (e.g., 108)" aria-label="Goal count" class="focus-ring" />
+            <button id="setGoal" class="secondary focus-ring">Set Goal</button>
           </div>
 
           <progress id="progress" max="100" value="0" aria-label="Progress towards goal"></progress>
 
           <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
-            <input id="addBy" type="number" placeholder="+ Add" aria-label="Add custom amount" />
-            <button id="addBtn" class="secondary">Add</button>
-            <button id="undo" class="secondary">Undo</button>
+            <input id="addBy" type="number" placeholder="+ Add" aria-label="Add custom amount" class="focus-ring" />
+            <button id="addBtn" class="secondary focus-ring">Add</button>
+            <button id="undo" class="secondary focus-ring">Undo</button>
+
+            <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+              <label class="pill" title="Enable sound">
+                <input id="soundToggle" type="checkbox" aria-label="Enable sound" />
+                <span style="font-size:13px;color:var(--muted)">Sound</span>
+              </label>
+              <button id="wakeBtn" class="secondary focus-ring" title="Keep screen on">Keep screen on</button>
+            </div>
           </div>
 
           <div class="history" id="history" aria-label="History of sessions and increments">
@@ -80,8 +131,9 @@
           </div>
 
           <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button id="export" class="secondary">Export CSV</button>
-            <button id="clearHistory" class="secondary">Clear History</button>
+            <button id="export" class="secondary focus-ring">Export CSV</button>
+            <button id="clearHistory" class="secondary focus-ring">Clear History</button>
+            <div style="margin-left:auto" class="small muted-ghost" id="sessionsCount">Entries: 0</div>
           </div>
 
           <div class="footer">
@@ -95,8 +147,13 @@
     <p style="margin-top:12px; color:var(--muted); font-size:13px;">Tip: Save this file and host on GitHub Pages or Netlify. Works offline in current tab (localStorage).</p>
   </div>
 
+  <!-- BIG tactile button for eyes-closed tapping (single tap only) -->
+  <button id="bigTap" class="big-tap" aria-label="Big tap to increment">
+    +1 <span class="label" aria-hidden>(tap)</span>
+  </button>
+
   <script>
-    // State and DOM
+    /* ================== State & DOM Refs ================== */
     const countEl = document.getElementById('count');
     const incBtn = document.getElementById('inc');
     const decBtn = document.getElementById('dec');
@@ -112,117 +169,173 @@
     const clearHistoryBtn = document.getElementById('clearHistory');
     const sessionTimerEl = document.getElementById('sessionTimer');
     const undoBtn = document.getElementById('undo');
+    const soundToggle = document.getElementById('soundToggle');
+    const sessionsCountEl = document.getElementById('sessionsCount');
+    const bigTap = document.getElementById('bigTap');
+    const wakeBtn = document.getElementById('wakeBtn');
 
     let state = {
       count: 0,
       goal: null,
-      history: [], // {t, delta, count}
-      lastAction: null,
-      sessionStart: Date.now()
+      history: [], // {t, delta, count, note?}
+      undoStack: [],
+      sessionStart: Date.now(),
+      soundOn: true
     };
 
-    const STORAGE_KEY = 'chant_counter_v1';
+    const STORAGE_KEY = 'chant_counter_v3';
 
-    // Load/save
-    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-    function load(){
+    /* ================== Audio & Vibration ================== */
+    const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+    function beepQuick(){
+      if(!audioCtx || !state.soundOn) return;
       try{
-        const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if(s){ state = {...state, ...s}; }
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.value = 880;
+        g.gain.value = 0.12;
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
+        o.stop(audioCtx.currentTime + 0.14);
       }catch(e){}
     }
+    function vibrate(ms=20){ if(navigator.vibrate) navigator.vibrate(ms); }
 
-    // UI updates
+    /* ================== Persistence ================== */
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function load(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return;
+        const s = JSON.parse(raw);
+        state = {...state, ...s};
+        state.history = state.history || [];
+        state.undoStack = state.undoStack || [];
+      }catch(e){ console.warn('Load failed', e); }
+    }
+
+    /* ================== Render ================== */
     function render(){
       countEl.textContent = state.count;
-      if(state.goal && state.goal>0){
+      if(state.goal && state.goal > 0){
         const percent = Math.min(100, Math.round((state.count / state.goal) * 100));
         progress.value = percent;
+        progress.classList.toggle('success', state.count >= state.goal);
         progressText.textContent = `Goal: ${state.goal} · ${state.count}/${state.goal} (${percent}%)`;
       } else {
         progress.value = 0;
+        progress.classList.remove('success');
         progressText.textContent = `Goal: —`;
       }
       renderHistory();
+      sessionsCountEl.textContent = `Entries: ${state.history.length}`;
+      soundToggle.checked = !!state.soundOn;
       save();
     }
 
     function renderHistory(){
       historyEl.innerHTML = '';
-      if(state.history.length===0){
-        historyEl.innerHTML = '<div class="small muted">No history yet</div>';
+      if(state.history.length === 0){
+        const empty = document.createElement('div');
+        empty.className = 'small muted-ghost';
+        empty.textContent = 'No history yet';
+        historyEl.appendChild(empty);
         return;
       }
-      state.history.slice().reverse().forEach(item=>{
+      state.history.slice().reverse().forEach(item => {
         const d = new Date(item.t);
-        const el = document.createElement('div');
-        el.className = 'hist-item';
-        el.innerHTML = `<div style="color:#0f172a">${item.delta>0?'+':''}${item.delta} → ${item.count}</div><div class="small">${d.toLocaleString()}</div>`;
-        historyEl.appendChild(el);
+        const wrap = document.createElement('div');
+        wrap.className = 'hist-item';
+        const left = document.createElement('div');
+        left.style.color = '#0f172a';
+        left.textContent = `${item.delta>0?'+':''}${item.delta} → ${item.count}`;
+        const right = document.createElement('div');
+        right.className = 'small muted-ghost';
+        right.textContent = d.toLocaleString();
+        wrap.appendChild(left);
+        wrap.appendChild(right);
+        historyEl.appendChild(wrap);
       });
     }
 
-    // Sound (WebAudio beep)
-    const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
-    function beepQuick(){
-      if(!audioCtx) return;
-      const o = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      o.type = 'sine';
-      o.frequency.value = 880;
-      g.gain.value = 0.12;
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
-      o.stop(audioCtx.currentTime + 0.14);
+    /* ================== Core change & goal sound ================== */
+    let goalReachedPlayed = false; // prevents repeated goal sound
+
+    function playGoalSound(){
+      if(!audioCtx || !state.soundOn) return;
+      try{
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(880, audioCtx.currentTime);
+        o.connect(g); g.connect(audioCtx.destination);
+        g.gain.value = 0.0001;
+        o.start();
+        g.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.02);
+        o.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.12);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.26);
+        o.stop(audioCtx.currentTime + 0.28);
+      }catch(e){ console.warn('goal sound failed', e); }
     }
 
-    // Vibrate helper
-    function vibrate(ms=30){ if(navigator.vibrate) navigator.vibrate(ms); }
-
-    // Change count
-    function change(delta, record=true){
+    function change(delta, note){
       state.count += delta;
       if(state.count < 0) state.count = 0;
-      if(record){
-        const entry = {t: Date.now(), delta, count: state.count};
-        state.history.push(entry);
-        state.lastAction = entry;
-      }
+
+      const entry = {t: Date.now(), delta, count: state.count, note: note || ''};
+      state.history.push(entry);
+      state.undoStack.push({delta: -delta, t: entry.t});
+
+      // normal feedback
       beepQuick();
-      vibrate(20);
+      vibrate(18);
+
+      // check goal - play goal sound once when reaching / exceeding goal
+      if(state.goal && state.goal > 0 && state.count >= state.goal){
+        if(!goalReachedPlayed){
+          playGoalSound();
+          goalReachedPlayed = true;
+        }
+      } else {
+        goalReachedPlayed = false;
+      }
+
       render();
     }
 
-    // Undo last
     function undo(){
-      if(!state.lastAction) return;
-      const last = state.lastAction;
-      // remove last occurrence in history (last by timestamp)
-      for(let i=state.history.length-1;i>=0;i--){
-        if(state.history[i].t === last.t && state.history[i].delta === last.delta){
-          state.history.splice(i,1);
+      if(state.undoStack.length === 0) return;
+      const u = state.undoStack.pop();
+      state.count += u.delta;
+      if(state.count < 0) state.count = 0;
+      for(let i = state.history.length - 1; i >= 0; i--){
+        if(state.history[i].t === u.t){
+          state.history.splice(i, 1);
           break;
         }
       }
-      state.count = Math.max(0, state.count - last.delta);
-      state.lastAction = null;
       render();
     }
 
-    // Buttons
+    /* ================== Buttons & bindings ================== */
     incBtn.addEventListener('click', ()=> change(1));
     decBtn.addEventListener('click', ()=> change(-1));
-    resetBtn.addEventListener('click', ()=>{
+    resetBtn.addEventListener('click', ()=> {
       if(!confirm('Reset count to 0?')) return;
+      const prev = state.count;
       state.count = 0;
-      state.history.push({t:Date.now(), delta:0, count:0, note:'reset'});
+      state.history.push({t:Date.now(), delta: -prev, count: 0, note:'reset'});
+      state.undoStack.push({delta: prev, t: Date.now()});
       render();
     });
 
     setGoalBtn.addEventListener('click', ()=>{
       const g = parseInt(goalInput.value);
-      if(!g || g<=0){ state.goal = null; alert('Enter a goal > 0 or clear to remove'); return; }
+      if(!g || isNaN(g) || g <= 0){ state.goal = null; goalInput.value = ''; alert('Enter a goal > 0 or clear to remove'); render(); return; }
       state.goal = g;
+      // reset goal sound flag if starting a new goal
+      goalReachedPlayed = (state.count >= state.goal);
       render();
     });
 
@@ -234,10 +347,10 @@
     });
 
     exportBtn.addEventListener('click', ()=>{
-      if(state.history.length===0){ alert('No history to export'); return; }
-      let csv = 'timestamp,delta,count\\n';
+      if(state.history.length === 0){ alert('No history to export'); return; }
+      let csv = 'timestamp,delta,count,note\n';
       state.history.forEach(it => {
-        csv += `"${new Date(it.t).toISOString()}",${it.delta},${it.count}\\n`;
+        csv += `"${new Date(it.t).toISOString()}",${it.delta},${it.count},"${(it.note||'').replace(/"/g,'""')}"\n`;
       });
       const blob = new Blob([csv], {type:'text/csv'});
       const url = URL.createObjectURL(blob);
@@ -247,29 +360,37 @@
     });
 
     clearHistoryBtn.addEventListener('click', ()=>{
-      if(!confirm('Clear history?')) return;
+      if(!confirm('Clear history? This cannot be undone.')) return;
       state.history = [];
+      state.undoStack = [];
       render();
     });
 
     undoBtn.addEventListener('click', undo);
 
-    // Keyboard (space to increment)
+    soundToggle.addEventListener('change', ()=> { state.soundOn = !!soundToggle.checked; save(); });
+
+    /* ================== Keyboard support ================== */
     window.addEventListener('keydown', (e) => {
+      const inInput = ['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
+      if(inInput) return;
       if(e.code === 'Space'){
         e.preventDefault();
         change(1);
+      } else if(e.code === 'Backspace'){
+        e.preventDefault();
+        change(-1);
       }
     });
 
-    // Long-press for + and - (mobile)
+    /* ================== Long-press continuous for inc/dec (kept for small inc/dec buttons) ================== */
     function attachLongPress(btn, delta){
       let timer = null, interval = null;
       const start = (e) => {
         e.preventDefault();
         change(delta);
         timer = setTimeout(()=> {
-          interval = setInterval(()=> change(delta), 120);
+          interval = setInterval(()=> change(delta), 110);
         }, 350);
       };
       const stop = () => {
@@ -284,7 +405,23 @@
     attachLongPress(incBtn, 1);
     attachLongPress(decBtn, -1);
 
-    // Session timer
+    /* ================== BIG TAP (single tap only) ================== */
+    (function(){
+      if(!bigTap) return;
+      document.body.classList.add('body-bottom-padding');
+
+      bigTap.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        change(1); // single +1 per tap only
+      }, {passive:false});
+
+      // accessibility: keyboard trigger
+      bigTap.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); change(1); }
+      });
+    })();
+
+    /* ================== Session timer ================== */
     function tickSession(){
       const diff = Date.now() - state.sessionStart;
       const s = Math.floor(diff/1000)%60;
@@ -294,20 +431,69 @@
     }
     setInterval(tickSession, 1000);
 
-    // Init
+    /* ================== Wake Lock (Keep screen on) ================== */
+    let wakeLock = null;
+    async function requestWakeLock(){
+      if(!('wakeLock' in navigator)){
+        alert('Wake Lock not supported in this browser. Try modern Safari on iOS or Chrome on Android.');
+        return;
+      }
+      try{
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeBtn.textContent = 'Screen on ✓';
+        wakeLock.addEventListener('release', () => {
+          wakeBtn.textContent = 'Keep screen on';
+        });
+      }catch(err){
+        console.warn('Wake Lock error', err);
+        alert('Unable to acquire wake lock: ' + (err && err.message ? err.message : err));
+      }
+    }
+    wakeBtn.addEventListener('click', ()=> requestWakeLock());
+
+    /* ================== Media Session / Volume best-effort (no lock-screen) ================== */
+    (function(){
+      window.addEventListener('keydown', (ev) => {
+        const code = ev.code || '';
+        const key = ev.key || '';
+        const keyCode = ev.keyCode || 0;
+        if(code === 'AudioVolumeUp' || key === 'VolumeUp' || keyCode === 175){
+          ev.preventDefault();
+          change(1);
+        }
+        if(code === 'AudioVolumeDown' || key === 'VolumeDown' || keyCode === 174){
+          ev.preventDefault();
+          change(-1);
+        }
+      }, {passive:false});
+
+      if('mediaSession' in navigator){
+        try {
+          navigator.mediaSession.setActionHandler('play', function() { change(1); });
+          navigator.mediaSession.setActionHandler('pause', function() { /* optional */ });
+        } catch(e) { console.warn('mediaSession handler failed', e); }
+      }
+    })();
+
+    /* ================== Friendly audio resume ================== */
+    function resumeAudioOnFirstGesture(){
+      function resume(){
+        if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        window.removeEventListener('click', resume);
+        window.removeEventListener('touchstart', resume);
+        window.removeEventListener('keydown', resume);
+      }
+      window.addEventListener('click', resume);
+      window.addEventListener('touchstart', resume);
+      window.addEventListener('keydown', resume);
+    }
+    resumeAudioOnFirstGesture();
+
+    /* ================== Load / start ================== */
     load();
     if(!state.sessionStart) state.sessionStart = Date.now();
+    if(typeof state.soundOn === 'undefined') state.soundOn = true;
     render();
-
-    // Friendly first-touch audio autoplay workaround: resume context on first user gesture
-    ['click','touchstart','keydown'].forEach(evt=>{
-      window.addEventListener(evt, function resume(){
-        if(audioCtx && audioCtx.state === 'suspended'){ audioCtx.resume(); }
-        window.removeEventListener(evt, resume);
-      });
-    });
-
-    // Accessibility: focus first button
     incBtn.focus();
   </script>
 </body>
