@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chant-counter-shell-v4';
+const CACHE_NAME = 'chant-counter-shell-v5';
 const OFFLINE_ASSETS = [
   './',
   './index.html',
@@ -32,7 +32,6 @@ self.addEventListener('fetch', event => {
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
-        // cache same-origin responses
         if (event.request.url.startsWith(self.location.origin)) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
