@@ -1,179 +1,168 @@
-<!doctype html>
+\<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Chanting Counter — Vibe & Big Tap</title>
+  <title>Chanting Counter — PWA + Haptics + Round Animation</title>
+  <!-- Link to manifest (add file below) -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0b0b0d" />
   <style>
+    /* Basic theme + dark support */
     :root{
-      --bg:#fff7fb; --card:#fff; --accent:#ff4fa1; --muted:#6b6f76;
-      --glass: rgba(255,79,161,0.12);
-      --tap-text:#111;
-      --progress-fill:#2f9a3f;
-      --shadow: 0 10px 30px rgba(22,28,45,0.06);
+      --bg:#fff7fb; --card:#fff; --accent:#ff4fa1; --muted:#6b6f76; --text:#0f172a; --tap-text:#111; --progress-fill:#2f9a3f;
     }
     @media (prefers-color-scheme: dark) {
       :root{
-        --bg:#07060a; --card:linear-gradient(180deg,#09080c,#0e0d12); --accent:#ff6fb0;
-        --muted:#9aa0a6; --tap-text:#fff; --progress-fill:#36b37e; --shadow: 0 10px 30px rgba(0,0,0,0.6);
+        --bg:#07060a; --card:linear-gradient(180deg,#09080c,#0e0d12);
+        --accent:#ff6fb0; --muted:#9aa0a6; --text:#e8e8ec; --tap-text:#fff; --progress-fill:#36b37e;
       }
     }
+
     *{box-sizing:border-box}
-    html,body{height:100%; margin:0; font-family:Inter, "Segoe UI", Roboto, Arial; background:var(--bg); color:var(--tap-text)}
+    html,body{height:100%; margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:var(--text)}
     .wrap{max-width:920px; margin:18px auto; padding:18px;}
     header{display:flex; align-items:center; gap:12px; margin-bottom:10px}
     header h1{font-size:20px; margin:0}
-    .card{background:var(--card); border-radius:14px; padding:18px; box-shadow:var(--shadow)}
+    .card{background:var(--card); border-radius:14px; padding:18px; box-shadow:0 12px 36px rgba(0,0,0,0.06)}
     .count-big{font-size:64px; font-weight:700; text-align:center}
-    .muted{color:var(--muted)}
-    .controls{display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap}
-    button{background:var(--accent); color:white; border:none; padding:12px 16px; border-radius:12px; font-weight:600; cursor:pointer}
-    button.secondary{background:transparent; color:var(--tap-text); border:1px solid rgba(0,0,0,0.06); box-shadow:none}
-    button.warn{background:#ef4444}
-    input[type="number"], input[type="text"]{padding:10px 12px; border-radius:8px; border:1px solid #eee; min-width:100px; background:transparent; color:var(--tap-text)}
-    progress{width:100%; height:14px; border-radius:8px; overflow:hidden; accent-color: var(--progress-fill);}
-    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
     .small{font-size:13px; color:var(--muted)}
-    .history{margin-top:14px; max-height:220px; overflow:auto; border-radius:8px; padding:8px; background:rgba(0,0,0,0.02)}
+    .controls{display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap}
+    button{background:var(--accent); color:white; border:none; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:700}
+    button.secondary{background:transparent; color:var(--text); border:1px solid rgba(0,0,0,0.06)}
+    input[type="number"], input[type="text"]{padding:12px;border-radius:16px;border:1px solid #eee;min-width:120px;background:transparent;color:var(--text);font-size:16px}
+    progress{width:100%;height:14px;border-radius:8px;overflow:hidden}
+    .history{margin-top:14px; max-height:220px; overflow:auto; border-radius:8px; padding:8px; background: rgba(0,0,0,0.03)}
     .hist-item{font-size:13px; padding:8px; border-radius:8px; display:flex; justify-content:space-between; gap:12px}
-    .tap-wrap{position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:60; width:96%; max-width:980px; pointer-events:none;}
-    /* BIGGER tap button adjustments */
-    .tap-btn{
-      pointer-events:auto; width:100%; border-radius:48px; padding:28px 20px; text-align:center;
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,79,161,0.06));
-      border: 1px solid rgba(255,79,161,0.12);
-      box-shadow: 0 16px 50px rgba(255,79,161,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
-      font-size:20px; font-weight:800; color:var(--tap-text); display:flex; align-items:center; justify-content:space-between; gap:18px;
-    }
-    .tap-left{display:flex; gap:14px; align-items:center;}
-    .tap-count{font-size:44px; font-weight:900}
+    /* Big translucent tap button (widened) */
+    .tap-wrap{position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:80; width:96%; max-width:1000px; pointer-events:none}
+    .tap-btn{pointer-events:auto; width:100%; border-radius:48px; padding:30px 22px; text-align:center; backdrop-filter: blur(8px); background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,79,161,0.06)); border:1px solid rgba(255,79,161,0.12); box-shadow:0 16px 50px rgba(255,79,161,0.12); display:flex; justify-content:space-between; align-items:center; gap:18px; font-weight:900; color:var(--tap-text) }
+    .tap-count{font-size:44px}
     .tap-note{font-size:14px; opacity:0.95}
-    @media (max-width:560px){
-      .count-big{font-size:46px}
-      .tap-btn{padding:22px; font-size:18px}
-      .tap-count{font-size:40px}
-    }
-    .notice{padding:10px;border-radius:8px;background:rgba(255,240,240,0.06);color:var(--muted);font-size:13px;margin-top:10px}
-    .top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;justify-content:space-between}
+    @media (max-width:560px){ .count-big{font-size:46px} .tap-btn{padding:24px} .tap-count{font-size:40px} }
+    .pill{padding:10px 14px; border-radius:28px; background:var(--card); border:1px solid rgba(0,0,0,0.04); font-weight:700}
+    /* Round overlay */
+    #roundOverlay{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1200; display:none; max-width:760px; width:84%; pointer-events:none; border-radius:20px; padding:22px; text-align:center; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 16px 60px rgba(255,100,150,0.12); }
+    @media (prefers-color-scheme: dark){ #roundOverlay{background: linear-gradient(180deg, rgba(20,18,20,0.92), rgba(30,26,30,0.86)); color: var(--text);} }
+    @media (prefers-color-scheme: light){ #roundOverlay{background: linear-gradient(180deg, rgba(255,245,250,0.98), rgba(255,235,245,0.95)); color: #2b0720;} }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden><path fill="#ff4fa1" d="M12 2L3 20h18L12 2z"></path></svg>
+      <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden><path fill="#ff4fa1" d="M12 2L3 20h18L12 2z"/></svg>
       <h1>Chanting Counter</h1>
     </header>
 
-    <div class="card" role="application" aria-label="Chanting counter application">
-      <div style="text-align:center; padding:8px 12px;">
-        <div class="small muted">Count</div>
-        <div id="count" class="count-big" aria-atomic="true">0</div>
-        <div id="goalText" class="muted small">Goal: —</div>
+    <main class="card" role="application" aria-label="Chanting counter">
+      <div style="text-align:center; padding:8px 12px">
+        <div class="small">Count</div>
+        <div id="count" class="count-big" aria-live="polite">0</div>
+        <div id="goalText" class="small">Goal: —</div>
       </div>
 
-      <!-- top actions row: clear history moved here -->
-      <div class="top-actions">
+      <!-- top actions -->
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <div class="controls">
-            <button id="dec" class="secondary" aria-label="Decrease">−1</button>
-            <button id="inc" aria-label="Increase">+1</button>
-            <button id="reset" class="warn" aria-label="Reset">Reset</button>
-          </div>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <input id="goalInput" type="number" min="1" placeholder="Goal (e.g., 108)" aria-label="Goal count" />
-            <button id="setGoal" class="secondary">Set Goal</button>
-          </div>
+          <button id="dec" class="secondary" aria-label="Decrease">−1</button>
+          <button id="inc" aria-label="Increase">+1</button>
+          <button id="reset" class="secondary" aria-label="Reset">Reset</button>
         </div>
 
-        <!-- Clear history moved to top-right -->
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input id="goalInput" type="number" min="1" placeholder="Goal (e.g., 108)" aria-label="Goal" />
+          <button id="setGoal" class="secondary">Set Goal</button>
+        </div>
+      </div>
+
+      <!-- per-round & clear -->
+      <div style="display:flex; justify-content:space-between; margin-top:12px; gap:12px; align-items:center;">
         <div style="display:flex; gap:8px; align-items:center;">
-          <button id="clearHistoryTop" class="secondary" title="Clear history">Clear History</button>
+          <input id="perRound" type="number" min="1" placeholder="Per round (e.g., 108)" aria-label="Per round" style="width:150px"/>
+          <button id="toggleAutoRound" class="secondary">Auto-round: On</button>
+        </div>
+        <div>
+          <button id="clearHistoryTop" class="secondary">Clear History</button>
         </div>
       </div>
 
-      <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <input id="perRound" type="number" min="1" placeholder="Per round (e.g., 108)" aria-label="Per round" style="width:120px"/>
-        <button id="toggleAutoRound" class="secondary">Auto-round: On</button>
-      </div>
-
-      <div style="margin-top:10px;">
+      <div style="margin-top:12px">
         <progress id="progress" max="100" value="0" aria-label="Progress"></progress>
       </div>
 
-      <div style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <input id="addBy" type="number" placeholder="+ Add" aria-label="Add custom amount" />
+      <div style="display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap;">
+        <input id="addBy" type="number" placeholder="+ Add" style="width:120px" />
         <button id="addBtn" class="secondary">Add</button>
         <button id="undo" class="secondary">Undo</button>
 
         <label class="small" style="display:flex; gap:8px; align-items:center;">
           <input id="soundToggle" type="checkbox" checked /> Om sound
         </label>
-
         <label class="small" style="display:flex; gap:8px; align-items:center;">
-          <input id="vibeToggle" type="checkbox" checked /> Vibration
+          <input id="hapticToggle" type="checkbox" checked /> Haptic
         </label>
       </div>
 
       <div style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <div style="padding:10px 14px; border-radius:28px; background:var(--card); border:1px solid rgba(0,0,0,0.03); font-weight:700">Rounds completed: <span id="roundsCompleted">0</span></div>
-        <div style="padding:10px 14px; border-radius:28px; background:var(--card); border:1px solid rgba(0,0,0,0.03); font-weight:700">In-round: <span id="inRound">0</span>/<span id="perRoundDisplay">108</span></div>
+        <div class="pill">Rounds completed: <span id="roundsCompleted">0</span></div>
+        <div class="pill">In-round: <span id="inRound">0</span>/<span id="perRoundDisplay">108</span></div>
       </div>
 
-      <div id="vibeNotice" class="notice" style="display:none"></div>
+      <div id="vibeNotice" class="small" style="margin-top:12px; color:var(--muted)"></div>
 
-      <div class="history" id="history" aria-label="History">
-        <!-- history items -->
-      </div>
-
-    </div>
+      <section class="history" id="history" aria-label="History"></section>
+    </main>
   </div>
 
-  <!-- BIG translucent tap button -->
-  <div class="tap-wrap" aria-hidden="false">
+  <!-- round overlay (created hidden, controlled by JS) -->
+  <div id="roundOverlay" aria-hidden="true"></div>
+
+  <!-- big translucent tap button -->
+  <div class="tap-wrap">
     <div id="tap" class="tap-btn" role="button" aria-label="+1 (tap)">
-      <div class="tap-left">
-        <div style="font-size:16px; color:var(--accent); opacity:0.95">Tap</div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <div style="color:var(--accent); font-weight:800">Tap</div>
         <div class="tap-count" id="tapCount">+1</div>
       </div>
-      <div style="display:flex; flex-direction:column; align-items:flex-end;">
+      <div style="text-align:right;">
         <div class="tap-note">tap</div>
         <div style="font-size:11px; color:var(--muted)">(long-press for continuous)</div>
       </div>
     </div>
   </div>
 
-<script>
-  // DOM refs
-  const countEl = document.getElementById('count');
-  const incBtn = document.getElementById('inc');
-  const decBtn = document.getElementById('dec');
-  const resetBtn = document.getElementById('reset');
-  const goalInput = document.getElementById('goalInput');
-  const setGoalBtn = document.getElementById('setGoal');
-  const progress = document.getElementById('progress');
-  const goalText = document.getElementById('goalText');
-  const addBy = document.getElementById('addBy');
-  const addBtn = document.getElementById('addBtn');
-  const historyEl = document.getElementById('history');
-  const exportBtn = document.getElementById('export');
-  const clearHistoryTop = document.getElementById('clearHistoryTop');
-  const undoBtn = document.getElementById('undo');
-  const tapBtn = document.getElementById('tap');
-  const perRoundInput = document.getElementById('perRound');
-  const roundsCompletedEl = document.getElementById('roundsCompleted');
-  const inRoundEl = document.getElementById('inRound');
-  const perRoundDisplay = document.getElementById('perRoundDisplay');
-  const toggleAutoRoundBtn = document.getElementById('toggleAutoRound');
-  const soundToggle = document.getElementById('soundToggle');
-  const vibeToggle = document.getElementById('vibeToggle');
-  const vibeNotice = document.getElementById('vibeNotice');
+  <script>
+  /***** Chanting Counter App v-ready *****
+   * Features:
+   * - persisted state (localStorage)
+   * - editable per-round
+   * - Om sound (WebAudio)
+   * - haptic/vibration with sound fallback
+   * - round-complete visual + chime + vibration pattern
+   * - PWA registration (service-worker registration)
+   *
+   * Put manifest.json and service-worker.js in repo root.
+   * Add icons at /icons/icon-192.svg and /icons/icon-512.svg (or PNG)
+   *****************************************/
 
-  // state
-  const STORAGE_KEY = 'chant_counter_v4';
-  let state = {
+  // DOM helpers
+  const $ = id => document.getElementById(id);
+
+  // elements
+  const countEl = $('count'), inRoundEl = $('inRound'), roundsEl = $('roundsCompleted'),
+        perRoundInput = $('perRound'), perRoundDisplay = $('perRoundDisplay'),
+        goalText = $('goalText'), historyEl = $('history'), progressEl = $('progress'),
+        tapBtn = $('tap'), incBtn = $('inc'), decBtn = $('dec'), resetBtn = $('reset'),
+        addBy = $('addBy'), addBtn = $('addBtn'), undoBtn = $('undo'),
+        setGoalBtn = $('setGoal'), goalInput = $('goalInput'), toggleAutoRoundBtn = $('toggleAutoRound'),
+        clearHistoryTop = $('clearHistoryTop'), soundToggle = $('soundToggle'), hapticToggle = $('hapticToggle'),
+        vibeNotice = $('vibeNotice'), roundOverlay = $('roundOverlay');
+
+  // storage key & initial state
+  const STORAGE_KEY = 'chant_counter_full_v1';
+  const defaultState = {
     totalCount: 0,
-    inRoundCount: 0,
+    inRound: 0,
     perRound: 108,
     roundsCompleted: 0,
     goal: null,
@@ -181,60 +170,71 @@
     lastAction: null,
     autoRound: true,
     sound: true,
-    vibration: true,
+    haptic: true,
     sessionStart: Date.now()
   };
+  let state = {...defaultState};
 
-  // Audio: Om-like tone (also used as fallback when vibration unsupported)
+  // WebAudio
   const AudioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+
   function playOm(){
     if(!AudioCtx) return;
     const now = AudioCtx.currentTime;
-    const o1 = AudioCtx.createOscillator();
-    const o2 = AudioCtx.createOscillator();
-    const g1 = AudioCtx.createGain();
-    const g2 = AudioCtx.createGain();
-    o1.type='sine'; o1.frequency.value=110;
-    o2.type='sine'; o2.frequency.value=220;
-    g1.gain.value=0.0001; g2.gain.value=0.0001;
+    const o1 = AudioCtx.createOscillator(), o2 = AudioCtx.createOscillator();
+    const g1 = AudioCtx.createGain(), g2 = AudioCtx.createGain();
+    o1.type = 'sine'; o1.frequency.value = 110;
+    o2.type = 'sine'; o2.frequency.value = 220;
     o1.connect(g1); o2.connect(g2); g1.connect(AudioCtx.destination); g2.connect(AudioCtx.destination);
-    g1.gain.setValueAtTime(0.0001, now); g1.gain.exponentialRampToValueAtTime(0.18, now+0.02); g1.gain.exponentialRampToValueAtTime(0.0001, now+0.8);
-    g2.gain.setValueAtTime(0.0001, now); g2.gain.exponentialRampToValueAtTime(0.09, now+0.03); g2.gain.exponentialRampToValueAtTime(0.0001, now+0.8);
+    g1.gain.setValueAtTime(0.0001, now); g1.gain.exponentialRampToValueAtTime(0.22, now+0.02); g1.gain.exponentialRampToValueAtTime(0.0001, now+0.85);
+    g2.gain.setValueAtTime(0.0001, now); g2.gain.exponentialRampToValueAtTime(0.09, now+0.03); g2.gain.exponentialRampToValueAtTime(0.0001, now+0.85);
     o1.start(now); o2.start(now); o1.stop(now+0.85); o2.stop(now+0.85);
   }
 
-  // save/load
-  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  function load(){
-    try {
-      const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if(s) state = {...state, ...s};
-    } catch(e){}
+  // Round chime (bell)
+  function playRoundChime(){
+    if(!AudioCtx) return;
+    const now = AudioCtx.currentTime;
+    const osc = AudioCtx.createOscillator();
+    const gain = AudioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(660, now);
+    osc.frequency.exponentialRampToValueAtTime(220, now + 0.7);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);
+    osc.connect(gain); gain.connect(AudioCtx.destination);
+    osc.start(now); osc.stop(now + 1.05);
+
+    const h = AudioCtx.createOscillator();
+    const gh = AudioCtx.createGain();
+    h.type = 'sine'; h.frequency.setValueAtTime(880, now);
+    gh.gain.setValueAtTime(0.0001, now);
+    gh.gain.exponentialRampToValueAtTime(0.12, now + 0.03);
+    gh.gain.exponentialRampToValueAtTime(0.0001, now + 0.95);
+    h.connect(gh); gh.connect(AudioCtx.destination);
+    h.start(now); h.stop(now + 0.95);
   }
 
-  // detect vibration support
-  const vibrationSupported = ('vibrate' in navigator);
-  function updateVibeNotice(){
-    if(!vibrationSupported){
-      vibeNotice.style.display = 'block';
-      vibeNotice.textContent = 'Vibration not supported by this browser (iOS Safari typically does not support vibration). Sound fallback will be used if enabled.';
-    } else {
-      vibeNotice.style.display = 'none';
-    }
+  // Persistence
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function load(){
+    try{
+      const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if(s) state = {...defaultState, ...s};
+    }catch(e){}
   }
 
   // UI render
   function render(){
     countEl.textContent = state.totalCount;
-    inRoundEl.textContent = state.inRoundCount;
+    inRoundEl.textContent = state.inRound;
     perRoundDisplay.textContent = state.perRound;
-    roundsCompletedEl.textContent = state.roundsCompleted;
+    roundsEl.textContent = state.roundsCompleted;
+    progressEl.value = state.goal ? Math.min(100, Math.round((state.totalCount/state.goal)*100)) : Math.min(100, Math.floor((state.inRound/state.perRound)*100));
     goalText.textContent = state.goal ? `Goal: ${state.goal} · ${state.totalCount}/${state.goal} (${Math.min(100, Math.round((state.totalCount/state.goal)*100))}%)` : 'Goal: —';
-    const prog = state.goal ? Math.min(100, Math.round((state.totalCount/state.goal)*100)) : Math.min(100, Math.floor((state.inRoundCount/state.perRound)*100));
-    progress.value = prog;
     toggleAutoRoundBtn.textContent = `Auto-round: ${state.autoRound ? 'On' : 'Off'}`;
-    soundToggle.checked = state.sound;
-    vibeToggle.checked = state.vibration;
+    soundToggle.checked = state.sound; hapticToggle.checked = state.haptic;
     perRoundInput.value = state.perRound;
     renderHistory();
     updateVibeNotice();
@@ -243,212 +243,217 @@
 
   function renderHistory(){
     historyEl.innerHTML = '';
-    if(state.history.length===0){
-      historyEl.innerHTML = '<div class="small muted">No history yet</div>';
-      return;
-    }
+    if(state.history.length === 0){ historyEl.innerHTML = '<div class="small">No history yet</div>'; return; }
     state.history.slice().reverse().forEach(it=>{
       const d = new Date(it.t);
-      const row = document.createElement('div');
-      row.className = 'hist-item';
-      row.innerHTML = `<div style="color:var(--tap-text)">${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`;
-      historyEl.appendChild(row);
+      const div = document.createElement('div'); div.className = 'hist-item';
+      div.style.display = 'flex'; div.style.justifyContent = 'space-between';
+      div.innerHTML = `<div style="color:var(--text)">${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`;
+      historyEl.appendChild(div);
     });
   }
 
-  // vibration helper with fallback sound
-  function doVibeOrSound(){
-    if(state.vibration && vibrationSupported){
-      try {
-        // short vibration pattern
-        navigator.vibrate(30);
-      } catch(e){
-        // fallback to sound if vibrate fails
-        if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playOm(); }
-      }
+  // vibration support
+  const vibrationSupported = 'vibrate' in navigator;
+  function updateVibeNotice(){
+    if(!vibrationSupported){
+      vibeNotice.textContent = 'Note: Vibration is not supported in this browser (iOS Safari usually lacks it). Sound fallback will be used.';
     } else {
-      // vibration unsupported: if sound enabled, play sound
-      if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playOm(); }
+      vibeNotice.textContent = '';
     }
   }
 
-  // core change handler
-  function change(delta, record=true){
-    state.totalCount += delta;
+  // confetti DOM burst
+  function createConfettiBurst(n){
+    for(let i=0;i<n;i++){
+      const p = document.createElement('div');
+      p.style.position = 'fixed';
+      p.style.left = (50 + (Math.random()*60 - 30)) + '%';
+      p.style.top = (50 + (Math.random()*10 - 5)) + '%';
+      p.style.width = p.style.height = (6 + Math.random()*8) + 'px';
+      p.style.background = ['#ffd6e8','#ff9acb','#ffbfdc','#ffc1e3'][Math.floor(Math.random()*4)];
+      p.style.borderRadius = '3px';
+      p.style.zIndex = 1210;
+      p.style.opacity = '1';
+      document.body.appendChild(p);
+      const dx = (Math.random()*160 - 80);
+      const dy = -80 - Math.random()*160;
+      p.animate([
+        { transform: 'translate(0,0) rotate(0deg)', opacity:1 },
+        { transform: `translate(${dx}px, ${dy}px) rotate(${Math.random()*360}deg)`, opacity:0 }
+      ], { duration: 1000 + Math.random()*400, easing: 'cubic-bezier(.2,.8,.2,1)'});
+      setTimeout(()=> p.remove(), 1400);
+    }
+  }
+
+  // round overlay create (once)
+  (function createRoundOverlay(){
+    roundOverlay.innerHTML = `<div style="font-size:20px; font-weight:800; margin-bottom:6px;">Round complete</div>
+                              <div style="font-size:42px; font-weight:900">ॐ · <span id="roundPlus">+0</span></div>`;
+    roundOverlay.style.display = 'none';
+  })();
+
+  function showRoundCompleteAnimation(){
+    const plusEl = document.getElementById('roundPlus');
+    if(plusEl) plusEl.textContent = `+${state.perRound}`;
+    roundOverlay.style.display = 'block';
+    roundOverlay.style.opacity = '0';
+    roundOverlay.style.transform = 'translate(-50%,-50%) scale(0.92)';
+    roundOverlay.animate([
+      { opacity: 0, transform: 'translate(-50%,-50%) scale(0.92)' },
+      { opacity: 1, transform: 'translate(-50%,-50%) scale(1.04)' },
+      { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }
+    ], { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1)'});
+    createConfettiBurst(12);
+    setTimeout(()=> {
+      roundOverlay.animate([{ opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(0.94)' }], { duration: 420, easing: 'ease' });
+      setTimeout(()=> roundOverlay.style.display = 'none', 460);
+    }, 1200);
+  }
+
+  function handleRoundComplete(){
+    // attempt haptic pattern first
+    if(state.haptic && vibrationSupported){
+      try{ navigator.vibrate([60,40,60]); } catch(e) { /* ignore */ }
+    } else {
+      // fallback to chime
+      if(state.sound && AudioCtx){ if(AudioCtx.state === 'suspended') AudioCtx.resume(); playRoundChime(); }
+    }
+    // visual + sound chime always (if audio allowed)
+    showRoundCompleteAnimation();
+    if(state.sound && AudioCtx){ if(AudioCtx.state === 'suspended') AudioCtx.resume(); playRoundChime(); }
+  }
+
+  // core change (apply delta), returns true if roundsCompleted increased
+  function applyDelta(delta, record=true){
+    const prevRounds = state.roundsCompleted;
+    state.totalCount = (state.totalCount || 0) + delta;
     if(state.totalCount < 0) state.totalCount = 0;
 
     if(state.autoRound){
-      state.inRoundCount += delta;
-      if(state.inRoundCount < 0){
+      state.inRound = (state.inRound || 0) + delta;
+      if(state.inRound < 0){
         if(state.roundsCompleted > 0){
           state.roundsCompleted = Math.max(0, state.roundsCompleted - 1);
-          state.inRoundCount = state.perRound + state.inRoundCount;
+          state.inRound = state.perRound + state.inRound;
         } else {
-          state.inRoundCount = 0;
+          state.inRound = 0;
         }
       }
-      while(state.inRoundCount >= state.perRound){
-        state.inRoundCount -= state.perRound;
+      while(state.inRound >= state.perRound){
+        state.inRound -= state.perRound;
         state.roundsCompleted += 1;
       }
     } else {
-      state.inRoundCount = state.totalCount % state.perRound;
+      state.inRound = state.totalCount % state.perRound;
       state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
     }
 
     if(record){
-      const entry = {t: Date.now(), delta, totalCount: state.totalCount, inRound: state.inRoundCount};
+      const entry = { t: Date.now(), delta, totalCount: state.totalCount, inRound: state.inRound };
       state.history.push(entry);
       state.lastAction = entry;
     }
 
-    // feedback: vibration or sound (or both per user)
-    doVibeOrSound();
+    // feedback: haptic or sound fallback
+    if(state.haptic && vibrationSupported){
+      try{ navigator.vibrate(30); } catch(e){ if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playOm(); } }
+    } else {
+      if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playOm(); }
+    }
 
+    // detect new rounds
+    const newRound = state.roundsCompleted > prevRounds;
     render();
+
+    if(newRound) handleRoundComplete();
+
+    return newRound;
   }
 
   function undo(){
     if(!state.lastAction) return;
     for(let i=state.history.length-1;i>=0;i--){
-      if(state.history[i].t === state.lastAction.t){
-        state.history.splice(i,1);
-        break;
-      }
+      if(state.history[i].t === state.lastAction.t){ state.history.splice(i,1); break; }
     }
     const last = state.history[state.history.length-1];
     if(last){
       state.totalCount = last.totalCount;
-      state.inRoundCount = last.inRound;
+      state.inRound = last.inRound;
       state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
     } else {
-      state.totalCount = 0; state.inRoundCount = 0; state.roundsCompleted = 0;
+      state.totalCount = 0; state.inRound = 0; state.roundsCompleted = 0;
     }
     state.lastAction = null;
     render();
   }
 
-  // Buttons and events
-  incBtn.addEventListener('click', ()=> change(1));
-  decBtn.addEventListener('click', ()=> change(-1));
-  resetBtn.addEventListener('click', ()=>{
-    if(!confirm('Reset total and in-round counts?')) return;
-    state.totalCount = 0; state.inRoundCount = 0; state.roundsCompleted = 0;
-    state.history.push({t:Date.now(), delta:0, totalCount:0, inRound:0, note:'reset'});
-    render();
-  });
-
-  setGoalBtn.addEventListener('click', ()=>{
-    const g = parseInt(goalInput.value);
-    if(!g || g<=0){ state.goal = null; alert('Enter a valid goal > 0 or clear to remove'); return; }
-    state.goal = g; render();
-  });
-
-  addBtn.addEventListener('click', ()=>{
-    const n = parseInt(addBy.value);
-    if(isNaN(n) || n===0) return;
-    change(n);
-    addBy.value = '';
-  });
-
-  clearHistoryTop.addEventListener('click', ()=>{
-    if(!confirm('Clear history?')) return;
-    state.history = []; render();
-  });
-
-  // also keep the bottom clearHistory if needed (older exports)
-  // undo
+  // event wiring
+  incBtn.addEventListener('click', ()=> applyDelta(1));
+  decBtn.addEventListener('click', ()=> applyDelta(-1));
+  resetBtn.addEventListener('click', ()=> { if(confirm('Reset total and in-round counts?')){ state.totalCount=0; state.inRound=0; state.roundsCompleted=0; state.history.push({t:Date.now(), delta:0, totalCount:0, inRound:0, note:'reset'}); render(); }});
+  addBtn.addEventListener('click', ()=> { const n = parseInt(addBy.value); if(!isNaN(n) && n!==0){ applyDelta(n); addBy.value=''; }});
   undoBtn.addEventListener('click', undo);
+  setGoalBtn.addEventListener('click', ()=> { const g = parseInt(goalInput.value); if(!g || g<=0){ state.goal = null; alert('Enter a valid goal > 0 or clear'); return; } state.goal = g; render();});
+  clearHistoryTop.addEventListener('click', ()=> { if(confirm('Clear history?')){ state.history = []; render(); }});
+  toggleAutoRoundBtn.addEventListener('click', ()=> { state.autoRound = !state.autoRound; if(state.autoRound){ const total = state.totalCount; state.roundsCompleted = Math.floor(total / state.perRound); state.inRound = total % state.perRound; } else { state.inRound = state.totalCount % state.perRound; state.roundsCompleted = Math.floor(state.totalCount/state.perRound); } render();});
+  soundToggle.addEventListener('change', e => { state.sound = e.target.checked; save(); });
+  hapticToggle.addEventListener('change', e => { state.haptic = e.target.checked; save(); });
 
-  // keyboard
-  window.addEventListener('keydown', (e)=>{
-    if(e.code === 'Space'){ e.preventDefault(); change(1); }
-    if(e.code === 'Backspace'){ e.preventDefault(); change(-1); }
-  });
-
-  // long-press continuous
-  function attachLongPress(el, delta){
-    let timer=null, interval=null;
-    const start = (ev) => {
-      ev.preventDefault();
-      change(delta);
-      timer = setTimeout(()=> {
-        interval = setInterval(()=> change(delta), 120);
-      }, 350);
-    };
-    const stop = () => {
-      if(timer) clearTimeout(timer);
-      if(interval) { clearInterval(interval); interval=null; }
-    };
-    el.addEventListener('pointerdown', start);
-    window.addEventListener('pointerup', stop);
-    el.addEventListener('pointerleave', stop);
-    el.addEventListener('pointercancel', stop);
-  }
-  attachLongPress(incBtn, 1);
-  attachLongPress(decBtn, -1);
-  attachLongPress(tapBtn, 1);
-
-  // tap button click
-  tapBtn.addEventListener('click', ()=> change(1));
-
-  // per-round input / toggle
-  perRoundInput.addEventListener('change', ()=>{
+  // perRound input change handling (fix to be editable)
+  perRoundInput.addEventListener('change', ()=> {
     const v = parseInt(perRoundInput.value);
     if(v && v>0){
       state.perRound = v;
       if(!state.autoRound){
         state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
-        state.inRoundCount = state.totalCount % state.perRound;
+        state.inRound = state.totalCount % state.perRound;
       } else {
-        state.inRoundCount = state.totalCount % state.perRound;
+        state.inRound = state.totalCount % state.perRound;
       }
       render();
     }
   });
 
-  toggleAutoRoundBtn.addEventListener('click', ()=>{
-    state.autoRound = !state.autoRound;
-    if(state.autoRound){
-      const total = state.totalCount;
-      state.roundsCompleted = Math.floor(total / state.perRound);
-      state.inRoundCount = total % state.perRound;
-    } else {
-      state.inRoundCount = state.totalCount % state.perRound;
-      state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
-    }
-    render();
+  // keyboard shortcuts
+  window.addEventListener('keydown', (e) => {
+    if(e.code === 'Space'){ e.preventDefault(); applyDelta(1); }
+    if(e.code === 'Backspace'){ e.preventDefault(); applyDelta(-1); }
   });
 
-  // sound/vibration toggles
-  soundToggle.addEventListener('change', ()=> { state.sound = soundToggle.checked; save(); });
-  vibeToggle.addEventListener('change', ()=> { state.vibration = vibeToggle.checked; save(); });
+  // tap button: long-press for continuous
+  let lpTimer = null, lpInterval = null;
+  tapBtn.addEventListener('pointerdown', (ev)=>{
+    ev.preventDefault();
+    applyDelta(1);
+    lpTimer = setTimeout(()=> { lpInterval = setInterval(()=> applyDelta(1), 120); }, 350);
+  });
+  window.addEventListener('pointerup', ()=> { if(lpTimer) clearTimeout(lpTimer); if(lpInterval){ clearInterval(lpInterval); lpInterval = null; } });
 
-  // session timer (simple)
-  function tickSession(){
-    const diff = Date.now() - state.sessionStart;
-    const s = Math.floor(diff/1000)%60;
-    const m = Math.floor(diff/60000)%60;
-    const h = Math.floor(diff/3600000);
-    // optional: show session somewhere; leaving minimal
-  }
-  setInterval(tickSession, 1000);
+  // also click
+  tapBtn.addEventListener('click', ()=> applyDelta(1));
 
-  // init
+  // load + init
   load();
   if(!state.sessionStart) state.sessionStart = Date.now();
   render();
 
-  // autoresume audio context on first gesture
-  ['click','touchstart','keydown'].forEach(evt=>{
+  // resume audio context on first user gesture
+  ['click','touchstart','keydown'].forEach(evt => {
     window.addEventListener(evt, function resume(){
       if(AudioCtx && AudioCtx.state === 'suspended') AudioCtx.resume();
       window.removeEventListener(evt, resume);
     });
   });
 
-  // initial vibration support check
-  updateVibeNotice();
-</script>
+  // register service worker (PWA)
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/service-worker.js').then(reg => {
+      console.log('Service worker registered', reg);
+    }).catch(err => {
+      console.warn('SW registration failed', err);
+    });
+  }
+  </script>
 </body>
 </html>
