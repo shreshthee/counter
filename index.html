@@ -5,16 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Chanting Counter — PWA + Haptics</title>
 
-  <!-- Manifest (relative path so works from /counter/ on GitHub Pages) -->
   <link rel="manifest" href="./manifest.json" />
-
-  <!-- Preferred PNG icons (recommended) -->
   <link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
   <link rel="apple-touch-icon" href="./icons/icon-512.png" sizes="512x512">
-
-  <!-- Fallback mask/icon -->
   <link rel="mask-icon" href="./icons/icon-192.svg" color="#ff4fa1">
-
   <meta name="theme-color" content="#0b0b0d" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -130,14 +124,11 @@
   </div>
 
   <script>
-  /* -------------------------
-     Full app script
-     - dynamic per-round linked to goal
-     - single-tap increment
-     - sound + haptic
-     - round-complete overlay (21 s) + long Om (6 s)
-     - PWA registration & icon check
-     ------------------------- */
+  /* Full updated script:
+     - playLongOm = 4s
+     - overlay visible 21s
+     - end-of-overlay soft bell chime plays after fade
+  */
 
   const $ = id => document.getElementById(id);
 
@@ -152,16 +143,13 @@
         vibeNotice = $('vibeNotice'), iconNotice = $('iconNotice'), roundOverlay = $('roundOverlay');
 
   const STORAGE_KEY = 'chant_counter_final_v1';
-  const defaultState = {
-    totalCount:0, inRound:0, perRound:0, roundsCompleted:0, goal:null, history:[], lastAction:null,
-    autoRound:true, sound:true, haptic:true, sessionStart:Date.now()
-  };
+  const defaultState = { totalCount:0, inRound:0, perRound:0, roundsCompleted:0, goal:null, history:[], lastAction:null, autoRound:true, sound:true, haptic:true, sessionStart:Date.now() };
   let state = {...defaultState};
 
   // Audio context
   const AudioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
 
-  // Short chime (used as fallback or immediate small chime)
+  // Short chime
   function playRoundChime(){
     if(!AudioCtx) return;
     const now = AudioCtx.currentTime;
@@ -177,9 +165,9 @@
     osc.start(now); osc.stop(now + 0.9);
   }
 
-  // --- Long Om + overlay (the block you asked about) ---
+  // --- playLongOm (4s) ---
   let __longOmStop = null;
-  function playLongOm(seconds = 6) {
+  function playLongOm(seconds = 4) {
     if (!AudioCtx) return;
     if (typeof __longOmStop === 'function') {
       try { __longOmStop(); } catch(e) {}
@@ -192,41 +180,58 @@
     const osc1 = AudioCtx.createOscillator();
     const osc2 = AudioCtx.createOscillator();
     const gain = AudioCtx.createGain();
-    const biquad = AudioCtx.createBiquadFilter();
+    const filter = AudioCtx.createBiquadFilter();
 
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(110, now);
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(220, now);
+    osc1.type = 'sine'; osc1.frequency.setValueAtTime(108, now);
+    osc2.type = 'sine'; osc2.frequency.setValueAtTime(216, now);
 
-    biquad.type = 'lowpass';
-    biquad.frequency.setValueAtTime(1200, now);
-    biquad.Q.setValueAtTime(0.7, now);
+    filter.type = 'lowpass'; filter.frequency.setValueAtTime(1200, now); filter.Q.setValueAtTime(0.8, now);
 
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.18, now + 0.25);
-    gain.gain.setValueAtTime(0.18, now + duration - 0.8);
+    gain.gain.linearRampToValueAtTime(0.2, now + 0.3);
+    gain.gain.setValueAtTime(0.2, now + duration - 0.5);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
-    osc1.connect(biquad);
-    osc2.connect(biquad);
-    biquad.connect(gain);
-    gain.connect(AudioCtx.destination);
+    osc1.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(AudioCtx.destination);
 
-    osc2.detune.value = 8 * (Math.random() - 0.5);
+    osc2.detune.value = 6 * (Math.random() - 0.5);
 
-    osc1.start(now);
-    osc2.start(now);
-    osc1.stop(now + duration + 0.05);
-    osc2.stop(now + duration + 0.05);
+    osc1.start(now); osc2.start(now);
+    osc1.stop(now + duration + 0.05); osc2.stop(now + duration + 0.05);
 
     __longOmStop = () => {
-      try { osc1.stop(); osc2.stop(); } catch(e){}
-      try { gain.gain.exponentialRampToValueAtTime(0.0001, AudioCtx.currentTime + 0.05); } catch(e){}
+      try { osc1.stop(); osc2.stop(); } catch (e) {}
+      try { gain.gain.exponentialRampToValueAtTime(0.0001, AudioCtx.currentTime + 0.05); } catch(e) {}
       __longOmStop = null;
     };
 
-    setTimeout(()=> { __longOmStop = null; }, (duration + 0.25) * 1000);
+    setTimeout(()=> { __longOmStop = null; }, (duration + 0.3) * 1000);
+  }
+
+  // --- playEndBell: soft bell that plays after overlay fades (closure) ---
+  function playEndBell() {
+    if (!AudioCtx) return;
+    const now = AudioCtx.currentTime;
+    const osc = AudioCtx.createOscillator();
+    const gain = AudioCtx.createGain();
+    const hf = AudioCtx.createBiquadFilter();
+    // bell: short high-frequency sine with quick decay
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1100, now);
+    // add tiny detune harmonic for color
+    const osc2 = AudioCtx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1320, now);
+    // gain envelope
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+    // mild highpass to keep it bright
+    hf.type = 'highpass';
+    hf.frequency.setValueAtTime(600, now);
+    osc.connect(hf); osc2.connect(hf); hf.connect(gain); gain.connect(AudioCtx.destination);
+    osc.start(now); osc2.start(now);
+    osc.stop(now + 0.75); osc2.stop(now + 0.75);
   }
 
   function createConfettiBurst(n){
@@ -243,59 +248,74 @@
       document.body.appendChild(p);
       const dx = (Math.random()*160 - 80);
       const dy = -80 - Math.random()*160;
-      p.animate([
-        { transform: 'translate(0,0) rotate(0deg)', opacity:1 },
-        { transform: `translate(${dx}px, ${dy}px) rotate(${Math.random()*360}deg)`, opacity:0 }
-      ], { duration: 1000 + Math.random()*400, easing: 'cubic-bezier(.2,.8,.2,1)'});
+      p.animate([{ transform: 'translate(0,0) rotate(0deg)', opacity:1 }, { transform: `translate(${dx}px, ${dy}px) rotate(${Math.random()*360}deg)`, opacity:0 }], { duration: 1000 + Math.random()*400, easing: 'cubic-bezier(.2,.8,.2,1)'});
       setTimeout(()=> p.remove(), 1400);
     }
   }
 
-function showRoundCompleteAnimation() {
-  const plusEl = document.getElementById('roundPlus');
-  if (plusEl) plusEl.textContent = `+${state.perRound || 0}`;
+  // --- robust overlay (21s) and schedule end bell after fade ---
+  function showRoundCompleteAnimation() {
+    if (!roundOverlay) return;
+    roundOverlay.innerHTML = `<div style="font-size:22px;font-weight:800;margin-bottom:8px;">Round complete</div>
+                              <div style="font-size:52px;font-weight:900">ॐ · <span id="roundPlus">${state.perRound || 0}</span></div>`;
 
-  // Update overlay content
-  roundOverlay.innerHTML = `
-    <div style="font-size:22px;font-weight:800;margin-bottom:8px;">Round complete</div>
-    <div style="font-size:52px;font-weight:900">ॐ · ${state.perRound || 0}</div>
-  `;
+    // clear prior timers/animations
+    try {
+      if (roundOverlay.__hideTimeout) { clearTimeout(roundOverlay.__hideTimeout); roundOverlay.__hideTimeout = null; }
+      if (roundOverlay.getAnimations) roundOverlay.getAnimations().forEach(a => a.cancel());
+    } catch(e){}
 
-  // Make visible with animation
-  roundOverlay.style.display = 'block';
-  roundOverlay.style.opacity = '0';
-  roundOverlay.style.transform = 'translate(-50%,-50%) scale(0.92)';
+    // show & force visible
+    roundOverlay.style.display = 'block';
+    roundOverlay.style.pointerEvents = 'auto';
+    roundOverlay.style.opacity = '1';
+    roundOverlay.style.transform = 'translate(-50%,-50%) scale(1)';
+    roundOverlay.dataset.visible = '1';
 
-  roundOverlay.animate([
-    { opacity: 0, transform: 'translate(-50%,-50%) scale(0.92)' },
-    { opacity: 1, transform: 'translate(-50%,-50%) scale(1.04)' },
-    { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }
-  ], { duration: 500, easing: 'cubic-bezier(.2,.9,.3,1)' });
+    // entrance animation
+    roundOverlay.animate([{ opacity:0, transform:'translate(-50%,-50%) scale(0.9)' }, { opacity:1, transform:'translate(-50%,-50%) scale(1.03)' }, { opacity:1, transform:'translate(-50%,-50%) scale(1)' }], { duration:450, easing:'cubic-bezier(.2,.9,.3,1)', fill:'forwards' });
 
-  // Confetti
-  createConfettiBurst(15);
+    // confetti
+    try{ createConfettiBurst(14); } catch(e){}
 
-  // If already showing, reset its timeout
-  if (roundOverlay.__hideTimeout) {
-    clearTimeout(roundOverlay.__hideTimeout);
+    // Set hide timer: 21s visible then fade (700ms). Schedule bell to play just after fade completes.
+    roundOverlay.__hideTimeout = setTimeout(() => {
+      const anim = roundOverlay.animate([{ opacity:1, transform:'translate(-50%,-50%) scale(1)' }, { opacity:0, transform:'translate(-50%,-50%) scale(0.94)' }], { duration:700, easing:'ease', fill:'forwards' });
+
+      // when fade finishes: hide and play end bell
+      anim.onfinish = () => {
+        roundOverlay.style.display = 'none';
+        roundOverlay.style.pointerEvents = 'none';
+        roundOverlay.dataset.visible = '0';
+        roundOverlay.__hideTimeout = null;
+        // play short bell after fade (closure)
+        if (state.sound && AudioCtx) {
+          try { playEndBell(); } catch(e) {}
+        } else {
+          // If no AudioCtx or sound disabled, do nothing
+        }
+      };
+
+      // safety fallback in case onfinish doesn't run
+      setTimeout(() => {
+        if (roundOverlay.__hideTimeout !== null) {
+          roundOverlay.style.display = 'none';
+          roundOverlay.style.pointerEvents = 'none';
+          roundOverlay.dataset.visible = '0';
+          roundOverlay.__hideTimeout = null;
+          if (state.sound && AudioCtx) {
+            try { playEndBell(); } catch(e) {}
+          }
+        }
+      }, 1200);
+
+    }, 21000); // 21 seconds
   }
 
-  // Keep visible for full 21 seconds before fading out
-  roundOverlay.__hideTimeout = setTimeout(() => {
-    roundOverlay.animate([
-      { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' },
-      { opacity: 0, transform: 'translate(-50%,-50%) scale(0.94)' }
-    ], { duration: 700, easing: 'ease' });
-
-    setTimeout(() => { roundOverlay.style.display = 'none'; }, 800);
-    roundOverlay.__hideTimeout = null;
-  }, 21000); // 21 seconds (21,000 ms)
-}
-
-  // immediate short chime + vibration fallback, then long Om + animation
-  function handleRoundComplete(){
-    if (state.haptic && vibrationSupported) {
-      try { navigator.vibrate([60,40,60]); } catch(e){}
+  // wrapper called when a round completes
+  function handleRoundComplete() {
+    if (state.haptic && 'vibrate' in navigator) {
+      try { navigator.vibrate([60,40,60]); } catch(e) {}
     } else {
       if (state.sound && AudioCtx) {
         if (AudioCtx.state === 'suspended') AudioCtx.resume();
@@ -303,19 +323,18 @@ function showRoundCompleteAnimation() {
       }
     }
 
+    // show overlay and play 4-second Om
     showRoundCompleteAnimation();
-
     if (state.sound && AudioCtx) {
       if (AudioCtx.state === 'suspended') AudioCtx.resume();
-      playLongOm(6); // 6 seconds long Om
+      playLongOm(4); // plays 4s
     }
   }
 
-  // persistence
+  // persistence helpers
   function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
   function load(){ try{ const s = JSON.parse(localStorage.getItem(STORAGE_KEY)); if(s) state = {...defaultState, ...s}; }catch(e){} }
 
-  // UI render
   function render(){
     countEl.textContent = state.totalCount;
     inRoundEl.textContent = state.inRound;
@@ -344,25 +363,16 @@ function showRoundCompleteAnimation() {
     });
   }
 
-  // vibration support
   const vibrationSupported = 'vibrate' in navigator;
+  function updateVibeNotice(){ if(!vibrationSupported) vibeNotice.textContent = 'Note: vibration unavailable in this browser (iOS Safari often does not support it). Sound fallback will be used.'; else vibeNotice.textContent=''; }
 
-  function updateVibeNotice(){
-    if(!vibrationSupported) vibeNotice.textContent = 'Note: vibration unavailable in this browser (iOS Safari often does not support it). Sound fallback will be used.';
-    else vibeNotice.textContent = '';
-  }
-
-  // core applyDelta
   function applyDelta(delta, record=true){
     const prevRounds = state.roundsCompleted;
     state.totalCount = (state.totalCount || 0) + delta;
     if(state.totalCount < 0) state.totalCount = 0;
 
-    if(linkPerRound.checked){
-      state.perRound = state.goal || 0;
-    } else {
-      state.perRound = parseInt(perRoundInput.value) || state.perRound || 0;
-    }
+    if(linkPerRound.checked) state.perRound = state.goal || 0;
+    else state.perRound = parseInt(perRoundInput.value) || state.perRound || 0;
 
     if(state.perRound > 0){
       state.inRound = (state.inRound || 0) + delta;
@@ -370,31 +380,17 @@ function showRoundCompleteAnimation() {
         if(state.roundsCompleted > 0){
           state.roundsCompleted = Math.max(0, state.roundsCompleted - 1);
           state.inRound = state.perRound + state.inRound;
-        } else {
-          state.inRound = 0;
-        }
+        } else state.inRound = 0;
       }
-      while(state.inRound >= state.perRound){
-        state.inRound -= state.perRound;
-        state.roundsCompleted += 1;
-      }
+      while(state.inRound >= state.perRound){ state.inRound -= state.perRound; state.roundsCompleted += 1; }
     } else {
-      state.inRound = state.totalCount;
-      state.roundsCompleted = 0;
+      state.inRound = state.totalCount; state.roundsCompleted = 0;
     }
 
-    if(record){
-      const entry = { t: Date.now(), delta, totalCount: state.totalCount, inRound: state.inRound };
-      state.history.push(entry);
-      state.lastAction = entry;
-    }
+    if(record){ const entry = { t:Date.now(), delta, totalCount: state.totalCount, inRound: state.inRound }; state.history.push(entry); state.lastAction = entry; }
 
-    // feedback per tap
-    if(state.haptic && vibrationSupported){
-      try{ navigator.vibrate(30); } catch(e){ if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); } }
-    } else {
-      if(state.sound && AudioCtx){ if(AudioCtx.state === 'suspended') AudioCtx.resume(); playRoundChime(); }
-    }
+    if(state.haptic && vibrationSupported){ try{ navigator.vibrate(30); } catch(e){ if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); } } }
+    else { if(state.sound && AudioCtx){ if(AudioCtx.state === 'suspended') AudioCtx.resume(); playRoundChime(); } }
 
     const newRound = state.roundsCompleted > prevRounds;
     render();
@@ -404,22 +400,13 @@ function showRoundCompleteAnimation() {
 
   function undo(){
     if(!state.lastAction) return;
-    for(let i=state.history.length-1;i>=0;i--){
-      if(state.history[i].t === state.lastAction.t){ state.history.splice(i,1); break; }
-    }
+    for(let i=state.history.length-1;i>=0;i--){ if(state.history[i].t === state.lastAction.t){ state.history.splice(i,1); break; } }
     const last = state.history[state.history.length-1];
-    if(last){
-      state.totalCount = last.totalCount;
-      state.inRound = last.inRound;
-      state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
-    } else {
-      state.totalCount = 0; state.inRound = 0; state.roundsCompleted = 0;
-    }
-    state.lastAction = null;
-    render();
+    if(last){ state.totalCount = last.totalCount; state.inRound = last.inRound; state.roundsCompleted = Math.floor(state.totalCount/state.perRound); } else { state.totalCount=0; state.inRound=0; state.roundsCompleted=0; }
+    state.lastAction = null; render();
   }
 
-  // events (single tap only)
+  // events
   incBtn.addEventListener('click', ()=> applyDelta(1));
   decBtn.addEventListener('click', ()=> applyDelta(-1));
   resetBtn.addEventListener('click', ()=> { if(confirm('Reset total and in-round counts?')){ state.totalCount=0; state.inRound=0; state.roundsCompleted=0; state.history.push({t:Date.now(), delta:0, totalCount:0, inRound:0, note:'reset'}); render(); }});
@@ -430,73 +417,34 @@ function showRoundCompleteAnimation() {
   soundToggle.addEventListener('change', e => { state.sound = e.target.checked; save(); });
   hapticToggle.addEventListener('change', e => { state.haptic = e.target.checked; save(); });
 
-  perRoundInput.addEventListener('change', ()=> {
-    const v = parseInt(perRoundInput.value);
-    if(!linkPerRound.checked && v && v>0){
-      state.perRound = v;
-      state.roundsCompleted = Math.floor(state.totalCount/state.perRound);
-      state.inRound = state.totalCount % state.perRound;
-      render();
-    }
-  });
+  perRoundInput.addEventListener('change', ()=> { const v = parseInt(perRoundInput.value); if(!linkPerRound.checked && v && v>0){ state.perRound = v; state.roundsCompleted = Math.floor(state.totalCount/state.perRound); state.inRound = state.totalCount % state.perRound; render(); }});
+  linkPerRound.addEventListener('change', ()=> { if(linkPerRound.checked){ state.perRound = state.goal || 0; perRoundInput.disabled = true; } else { perRoundInput.disabled = false; } render(); });
 
-  linkPerRound.addEventListener('change', ()=> {
-    if(linkPerRound.checked){
-      state.perRound = state.goal || 0;
-      perRoundInput.disabled = true;
-    } else {
-      perRoundInput.disabled = false;
-    }
-    render();
-  });
-
-  // Tap: single tap increments
   tapBtn.addEventListener('click', ()=> applyDelta(1));
+  window.addEventListener('keydown', (e) => { if(e.code === 'Space'){ e.preventDefault(); applyDelta(1); } if(e.code === 'Backspace'){ e.preventDefault(); applyDelta(-1); } });
 
-  // keyboard
-  window.addEventListener('keydown', (e) => {
-    if(e.code === 'Space'){ e.preventDefault(); applyDelta(1); }
-    if(e.code === 'Backspace'){ e.preventDefault(); applyDelta(-1); }
-  });
+  ['click','touchstart','keydown'].forEach(evt => { window.addEventListener(evt, function resume(){ if(AudioCtx && AudioCtx.state === 'suspended') AudioCtx.resume(); window.removeEventListener(evt, resume); }); });
 
-  // audio resume on gesture
-  ['click','touchstart','keydown'].forEach(evt => {
-    window.addEventListener(evt, function resume(){
-      if(AudioCtx && AudioCtx.state === 'suspended') AudioCtx.resume();
-      window.removeEventListener(evt, resume);
-    });
-  });
-
-  // icon check helper
+  // Icon check helper
   async function checkIcons(){
     try{
       const r1 = await fetch('./icons/icon-192.png', { method: 'HEAD' });
       const r2 = await fetch('./icons/icon-512.png', { method: 'HEAD' });
-      if(r1.ok && r2.ok){
-        iconNotice.style.display = 'none';
-        return true;
-      } else {
-        iconNotice.style.display = 'block';
-        iconNotice.innerText = 'App icons not found: upload ./icons/icon-192.png and ./icons/icon-512.png for proper home-screen icons. (SVG fallbacks exist but PNGs recommended.)';
-        return false;
-      }
-    } catch(e){
-      iconNotice.style.display = 'block';
-      iconNotice.innerText = 'Could not check icons (network). Ensure ./icons/icon-192.png and ./icons/icon-512.png are present in repo.';
-      return false;
-    }
+      if(r1.ok && r2.ok){ iconNotice.style.display = 'none'; return true; }
+      else { iconNotice.style.display = 'block'; iconNotice.innerText = 'App icons not found: upload ./icons/icon-192.png and ./icons/icon-512.png for proper home-screen icons. (SVG fallback exists.)'; return false; }
+    } catch(e){ iconNotice.style.display = 'block'; iconNotice.innerText = 'Could not check icons (network). Ensure ./icons/icon-192.png and ./icons/icon-512.png are present.'; return false; }
   }
 
-  // load + init
+  // init
   load();
   if(!state.sessionStart) state.sessionStart = Date.now();
   if(linkPerRound.checked){ perRoundInput.disabled = true; if(state.goal) state.perRound = state.goal; }
   render();
   checkIcons();
 
-  // register service worker (for PWA/offline)
+  // register SW
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./service-worker.js').then(reg => console.log('SW registered', reg)).catch(err => console.warn('SW registration failed', err));
+    navigator.serviceWorker.register('./service-worker.js').then(reg => console.log('SW registered', reg)).catch(err => console.warn('SW failed', err));
   }
   </script>
 </body>
