@@ -14,37 +14,105 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <style>
-    :root{--bg:#fff7fb;--card:#fff;--accent:#ff4fa1;--muted:#6b6f76;--text:#0f172a;--tap-text:#111;--progress-fill:#2f9a3f;}
-    @media (prefers-color-scheme:dark){:root{--bg:#07060a;--card:linear-gradient(180deg,#09080c,#0e0d12);--accent:#ff6fb0;--muted:#9aa0a6;--text:#e8e8ec;--tap-text:#fff;--progress-fill:#36b37e;}}
+    /* ---------- Color palettes & theme variables ---------- */
+    :root{
+      /* Morning (light) */
+      --bg-light: #F8FBFF;
+      --card-light: #fff;
+      --text-light: #0B1E2E;
+      --main-counter-light: #4EB1FF;
+      --accent-light: #FFC45A;
+      --subtext-light: #A7FF7A;
+      --tap-bg-light: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,79,161,0.06));
+
+      /* Night (dark) */
+      --bg-dark: #101010;
+      --card-dark: linear-gradient(180deg,#0e0d12,#09080c);
+      --text-dark: #EDEDED;
+      --main-counter-dark: #3FFFD4;
+      --accent-dark: #FFB347;
+      --subtext-dark: #EDEDED;
+      --tap-bg-dark: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.00));
+    }
+
+    /* base */
     *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;background:var(--bg);color:var(--text)}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;background:var(--bg-light);color:var(--text-light)}
+    @media (prefers-color-scheme: dark){ html,body{background:var(--bg-dark);color:var(--text-dark)} }
+
     .wrap{max-width:920px;margin:18px auto;padding:18px;}
     header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
-    header h1{font-size:20px;margin:0}
-    .card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 12px 36px rgba(0,0,0,0.06)}
+    header h1{font-size:20px;margin:0;font-weight:800}
+
+    /* Om circle */
+    .om-circle{
+      font-family: "Noto Sans Devanagari", "Noto Sans", sans-serif;
+      font-size:24px;font-weight:900;
+      width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      color:#111;
+      background: radial-gradient(circle, #ffd6e8, #ff8bb3);
+      box-shadow:0 6px 18px rgba(255,79,161,0.22);
+      transition: box-shadow .25s, transform .18s;
+    }
+    @media (prefers-color-scheme: dark){
+      .om-circle{ background: radial-gradient(circle,#FFB347,#FF7F50); color:#101010; box-shadow:0 8px 26px rgba(255,179,71,0.22); }
+    }
+    @keyframes pulseOm { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
+
+    /* card & UI */
+    .card{background:var(--card-light);border-radius:14px;padding:18px;box-shadow:0 12px 36px rgba(0,0,0,0.06)}
+    @media (prefers-color-scheme: dark){ .card{ background:var(--card-dark); } }
     .count-big{font-size:64px;font-weight:700;text-align:center}
-    .small{font-size:13px;color:var(--muted)}
-    button{background:var(--accent);color:white;border:none;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700}
-    button.secondary{background:transparent;color:var(--text);border:1px solid rgba(0,0,0,0.06)}
-    input[type="number"], input[type="text"]{padding:12px;border-radius:16px;border:1px solid #eee;min-width:120px;background:transparent;color:var(--text);font-size:16px}
+    .small{font-size:13px;color:var(--subtext-light)}
+    @media (prefers-color-scheme: dark){ .small{ color:var(--subtext-dark) } }
+
+    /* bind main counter colors */
+    #count { color: var(--main-counter-light); }
+    @media (prefers-color-scheme: dark){ #count { color: var(--main-counter-dark); } }
+
+    button{background:var(--accent-light);color:#101010;border:none;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700}
+    button.secondary{background:transparent;color:inherit;border:1px solid rgba(0,0,0,0.06)}
+    @media (prefers-color-scheme: dark){ button{ background:var(--accent-dark); color:#101010 } }
+
+    input[type="number"],input[type="text"]{padding:12px;border-radius:16px;border:1px solid #eee;min-width:120px;background:transparent;color:inherit;font-size:16px}
     progress{width:100%;height:14px;border-radius:8px;overflow:hidden}
+    progress::-webkit-progress-value{ background: var(--accent-light); }
+    @media (prefers-color-scheme: dark){ progress::-webkit-progress-value{ background:var(--accent-dark); } }
+
     .history{margin-top:14px;max-height:220px;overflow:auto;border-radius:8px;padding:8px;background:rgba(0,0,0,0.03)}
     .hist-item{font-size:13px;padding:8px;border-radius:8px;display:flex;justify-content:space-between;gap:12px}
-    .tap-wrap{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:80;width:96%;max-width:1000px}
-    .tap-btn{pointer-events:auto;width:100%;border-radius:48px;padding:30px 22px;text-align:center;backdrop-filter:blur(8px);background:linear-gradient(180deg,rgba(255,255,255,0.55),rgba(255,79,161,0.06));border:1px solid rgba(255,79,161,0.12);box-shadow:0 16px 50px rgba(255,79,161,0.12);display:flex;justify-content:space-between;align-items:center;gap:18px;font-weight:900;color:var(--tap-text)}
+
+    /* TAP BUTTON moved upward */
+    .tap-wrap{
+      position:fixed; left:50%; transform:translateX(-50%); bottom:40px; z-index:80; width:96%; max-width:1000px;
+    }
+    .tap-btn{
+      pointer-events:auto; width:100%; border-radius:48px; padding:30px 22px; text-align:center; display:flex; justify-content:space-between; align-items:center; gap:18px; font-weight:900;
+      background: var(--tap-bg-light);
+      border:1px solid rgba(255,79,161,0.12);
+      box-shadow:0 16px 50px rgba(255,79,161,0.08);
+      color:#111;
+      backdrop-filter: blur(8px);
+    }
+    @media (prefers-color-scheme: dark){
+      .tap-btn{ background: var(--tap-bg-dark); border:1px solid rgba(255,255,255,0.03); box-shadow:0 16px 40px rgba(0,0,0,0.5); color: #fff; }
+    }
     .tap-count{font-size:44px}
     .tap-note{font-size:14px;opacity:0.95}
-    .pill{padding:10px 14px;border-radius:28px;background:var(--card);border:1px solid rgba(0,0,0,0.04);font-weight:700}
-    #roundOverlay{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1200;display:none;max-width:760px;width:84%;pointer-events:none;border-radius:20px;padding:22px;text-align:center;backdrop-filter: blur(6px);-webkit-backdrop-filter: blur(6px);box-shadow: 0 16px 60px rgba(255,100,150,0.12)}
-    @media (prefers-color-scheme: dark){ #roundOverlay{background: linear-gradient(180deg, rgba(20,18,20,0.92), rgba(30,26,30,0.86)); color: var(--text);} }
-    @media (prefers-color-scheme: light){ #roundOverlay{background: linear-gradient(180deg, rgba(255,245,250,0.98), rgba(255,235,245,0.95)); color: #2b0720;} }
-    .notice{margin-top:10px;padding:8px 10px;border-radius:10px;background:rgba(255,240,240,0.04);color:var(--muted);font-size:13px}
+    .pill{padding:10px 14px;border-radius:28px;background:transparent;border:1px solid rgba(0,0,0,0.06);font-weight:700}
+
+    #roundOverlay{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1200; display:none; max-width:760px; width:84%; pointer-events:none; border-radius:20px; padding:22px; text-align:center; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 16px 60px rgba(255,100,150,0.12); }
+    @media (prefers-color-scheme: dark){ #roundOverlay{ background:linear-gradient(180deg, rgba(10,10,10,0.95), rgba(25,25,25,0.95)); color:var(--text-dark) } }
+    @media (prefers-color-scheme: light){ #roundOverlay{ background:linear-gradient(180deg, rgba(255,245,250,0.98), rgba(255,235,245,0.95)); color: #2b0720; } }
+
+    .notice{ margin-top:10px; padding:8px 10px; border-radius:10px; background:rgba(255,240,240,0.04); color:var(--subtext-light); font-size:13px }
+    @media (prefers-color-scheme: dark){ .notice{ color:var(--subtext-dark) } }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden><path fill="#ff4fa1" d="M12 2L3 20h18L12 2z"/></svg>
+      <div id="omIcon" class="om-circle" aria-hidden="true">ॐ</div>
       <h1>Chanting Counter</h1>
     </header>
 
@@ -114,7 +182,7 @@
   <div class="tap-wrap">
     <div id="tap" class="tap-btn" role="button" aria-label="+1 (tap)">
       <div style="display:flex; gap:12px; align-items:center;">
-        <div style="color:var(--accent); font-weight:800">Tap</div>
+        <div style="color:#ff4fa1; font-weight:800">Tap</div>
         <div class="tap-count" id="tapCount">+1</div>
       </div>
       <div style="text-align:right;">
@@ -124,15 +192,10 @@
   </div>
 
   <script>
-  /* Full updated script:
-     - playLongOm = 4s
-     - overlay visible 21s
-     - end-of-overlay soft bell chime plays after fade
-  */
-
+  /* ------------- Full script ------------- */
   const $ = id => document.getElementById(id);
 
-  // DOM refs
+  // DOM
   const countEl = $('count'), inRoundEl = $('inRound'), roundsEl = $('roundsCompleted'),
         perRoundInput = $('perRound'), perRoundDisplay = $('perRoundDisplay'),
         goalText = $('goalText'), historyEl = $('history'), progressEl = $('progress'),
@@ -140,13 +203,13 @@
         addBy = $('addBy'), addBtn = $('addBtn'), undoBtn = $('undo'),
         setGoalBtn = $('setGoal'), goalInput = $('goalInput'), linkPerRound = $('linkPerRound'),
         clearHistoryTop = $('clearHistoryTop'), soundToggle = $('soundToggle'), hapticToggle = $('hapticToggle'),
-        vibeNotice = $('vibeNotice'), iconNotice = $('iconNotice'), roundOverlay = $('roundOverlay');
+        vibeNotice = $('vibeNotice'), iconNotice = $('iconNotice'), roundOverlay = $('roundOverlay'),
+        omIcon = $('omIcon');
 
-  const STORAGE_KEY = 'chant_counter_final_v1';
-  const defaultState = { totalCount:0, inRound:0, perRound:0, roundsCompleted:0, goal:null, history:[], lastAction:null, autoRound:true, sound:true, haptic:true, sessionStart:Date.now() };
+  const STORAGE_KEY = 'chant_counter_final_v2';
+  const defaultState = { totalCount:0, inRound:0, perRound:0, roundsCompleted:0, goal:null, history:[], lastAction:null, sound:true, haptic:true, sessionStart:Date.now() };
   let state = {...defaultState};
 
-  // Audio context
   const AudioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
 
   // Short chime
@@ -165,18 +228,15 @@
     osc.start(now); osc.stop(now + 0.9);
   }
 
-  // --- playLongOm (4s) ---
+  // Long Om for 4s (warm drone)
   let __longOmStop = null;
   function playLongOm(seconds = 4) {
     if (!AudioCtx) return;
-    if (typeof __longOmStop === 'function') {
-      try { __longOmStop(); } catch(e) {}
-      __longOmStop = null;
-    }
+    if (typeof __longOmStop === 'function') try { __longOmStop(); } catch(e) {}
+    __longOmStop = null;
 
     const now = AudioCtx.currentTime;
     const duration = Math.max(0.5, seconds);
-
     const osc1 = AudioCtx.createOscillator();
     const osc2 = AudioCtx.createOscillator();
     const gain = AudioCtx.createGain();
@@ -193,47 +253,41 @@
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
     osc1.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(AudioCtx.destination);
-
     osc2.detune.value = 6 * (Math.random() - 0.5);
 
     osc1.start(now); osc2.start(now);
     osc1.stop(now + duration + 0.05); osc2.stop(now + duration + 0.05);
 
     __longOmStop = () => {
-      try { osc1.stop(); osc2.stop(); } catch (e) {}
-      try { gain.gain.exponentialRampToValueAtTime(0.0001, AudioCtx.currentTime + 0.05); } catch(e) {}
+      try { osc1.stop(); osc2.stop(); } catch(e) {}
+      try { gain.gain.exponentialRampToValueAtTime(0.0001, AudioCtx.currentTime + 0.05); } catch(e){}
       __longOmStop = null;
     };
 
-    setTimeout(()=> { __longOmStop = null; }, (duration + 0.3) * 1000);
+    setTimeout(()=> { __longOmStop = null; }, (duration + 0.3)*1000);
   }
 
-  // --- playEndBell: soft bell that plays after overlay fades (closure) ---
-  function playEndBell() {
-    if (!AudioCtx) return;
+  // End bell after overlay fades
+  function playEndBell(){
+    if(!AudioCtx) return;
     const now = AudioCtx.currentTime;
     const osc = AudioCtx.createOscillator();
+    const osc2 = AudioCtx.createOscillator();
     const gain = AudioCtx.createGain();
     const hf = AudioCtx.createBiquadFilter();
-    // bell: short high-frequency sine with quick decay
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1100, now);
-    // add tiny detune harmonic for color
-    const osc2 = AudioCtx.createOscillator();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(1320, now);
-    // gain envelope
+
+    osc.type = 'sine'; osc.frequency.setValueAtTime(1100, now);
+    osc2.type = 'sine'; osc2.frequency.setValueAtTime(1320, now);
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
-    // mild highpass to keep it bright
-    hf.type = 'highpass';
-    hf.frequency.setValueAtTime(600, now);
+    gain.gain.exponentialRampToValueAtTime(0.28, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+    hf.type = 'highpass'; hf.frequency.setValueAtTime(600, now);
+
     osc.connect(hf); osc2.connect(hf); hf.connect(gain); gain.connect(AudioCtx.destination);
-    osc.start(now); osc2.start(now);
-    osc.stop(now + 0.75); osc2.stop(now + 0.75);
+    osc.start(now); osc2.start(now); osc.stop(now + 0.75); osc2.stop(now + 0.75);
   }
 
+  // confetti helper
   function createConfettiBurst(n){
     for(let i=0;i<n;i++){
       const p = document.createElement('div');
@@ -243,95 +297,83 @@
       p.style.width = p.style.height = (6 + Math.random()*8) + 'px';
       p.style.background = ['#ffd6e8','#ff9acb','#ffbfdc','#ffc1e3'][Math.floor(Math.random()*4)];
       p.style.borderRadius = '3px';
-      p.style.zIndex = 1210;
-      p.style.opacity = '1';
+      p.style.zIndex = 1210; p.style.opacity='1';
       document.body.appendChild(p);
       const dx = (Math.random()*160 - 80);
       const dy = -80 - Math.random()*160;
-      p.animate([{ transform: 'translate(0,0) rotate(0deg)', opacity:1 }, { transform: `translate(${dx}px, ${dy}px) rotate(${Math.random()*360}deg)`, opacity:0 }], { duration: 1000 + Math.random()*400, easing: 'cubic-bezier(.2,.8,.2,1)'});
+      p.animate([{ transform:'translate(0,0) rotate(0deg)', opacity:1 }, { transform:`translate(${dx}px, ${dy}px) rotate(${Math.random()*360}deg)`, opacity:0 }], { duration: 1000 + Math.random()*400, easing:'cubic-bezier(.2,.8,.2,1)'});
       setTimeout(()=> p.remove(), 1400);
     }
   }
 
-  // --- robust overlay (21s) and schedule end bell after fade ---
-  function showRoundCompleteAnimation() {
-    if (!roundOverlay) return;
+  // Robust 21s overlay + schedule end bell
+  function showRoundCompleteAnimation(){
+    if(!roundOverlay) return;
     roundOverlay.innerHTML = `<div style="font-size:22px;font-weight:800;margin-bottom:8px;">Round complete</div>
                               <div style="font-size:52px;font-weight:900">ॐ · <span id="roundPlus">${state.perRound || 0}</span></div>`;
 
-    // clear prior timers/animations
     try {
-      if (roundOverlay.__hideTimeout) { clearTimeout(roundOverlay.__hideTimeout); roundOverlay.__hideTimeout = null; }
-      if (roundOverlay.getAnimations) roundOverlay.getAnimations().forEach(a => a.cancel());
+      if(roundOverlay.__hideTimeout){ clearTimeout(roundOverlay.__hideTimeout); roundOverlay.__hideTimeout = null; }
+      if(roundOverlay.getAnimations) roundOverlay.getAnimations().forEach(a=>a.cancel());
     } catch(e){}
 
-    // show & force visible
     roundOverlay.style.display = 'block';
     roundOverlay.style.pointerEvents = 'auto';
     roundOverlay.style.opacity = '1';
     roundOverlay.style.transform = 'translate(-50%,-50%) scale(1)';
     roundOverlay.dataset.visible = '1';
 
-    // entrance animation
     roundOverlay.animate([{ opacity:0, transform:'translate(-50%,-50%) scale(0.9)' }, { opacity:1, transform:'translate(-50%,-50%) scale(1.03)' }, { opacity:1, transform:'translate(-50%,-50%) scale(1)' }], { duration:450, easing:'cubic-bezier(.2,.9,.3,1)', fill:'forwards' });
 
-    // confetti
-    try{ createConfettiBurst(14); } catch(e){}
+    try { createConfettiBurst(14); } catch(e){}
 
-    // Set hide timer: 21s visible then fade (700ms). Schedule bell to play just after fade completes.
-    roundOverlay.__hideTimeout = setTimeout(() => {
+    roundOverlay.__hideTimeout = setTimeout(()=>{
       const anim = roundOverlay.animate([{ opacity:1, transform:'translate(-50%,-50%) scale(1)' }, { opacity:0, transform:'translate(-50%,-50%) scale(0.94)' }], { duration:700, easing:'ease', fill:'forwards' });
-
-      // when fade finishes: hide and play end bell
       anim.onfinish = () => {
         roundOverlay.style.display = 'none';
         roundOverlay.style.pointerEvents = 'none';
         roundOverlay.dataset.visible = '0';
         roundOverlay.__hideTimeout = null;
-        // play short bell after fade (closure)
-        if (state.sound && AudioCtx) {
-          try { playEndBell(); } catch(e) {}
-        } else {
-          // If no AudioCtx or sound disabled, do nothing
-        }
+        // play end bell
+        if(state.sound && AudioCtx) { try{ playEndBell(); } catch(e){} }
       };
-
-      // safety fallback in case onfinish doesn't run
-      setTimeout(() => {
-        if (roundOverlay.__hideTimeout !== null) {
-          roundOverlay.style.display = 'none';
-          roundOverlay.style.pointerEvents = 'none';
-          roundOverlay.dataset.visible = '0';
-          roundOverlay.__hideTimeout = null;
-          if (state.sound && AudioCtx) {
-            try { playEndBell(); } catch(e) {}
-          }
+      // fallback safety
+      setTimeout(()=>{
+        if(roundOverlay.__hideTimeout !== null){
+          roundOverlay.style.display = 'none'; roundOverlay.style.pointerEvents='none'; roundOverlay.dataset.visible='0'; roundOverlay.__hideTimeout = null;
+          if(state.sound && AudioCtx) try{ playEndBell(); } catch(e){}
         }
       }, 1200);
-
-    }, 21000); // 21 seconds
+    }, 21000);
   }
 
-  // wrapper called when a round completes
-  function handleRoundComplete() {
-    if (state.haptic && 'vibrate' in navigator) {
-      try { navigator.vibrate([60,40,60]); } catch(e) {}
-    } else {
-      if (state.sound && AudioCtx) {
-        if (AudioCtx.state === 'suspended') AudioCtx.resume();
-        playRoundChime();
-      }
+  // animate Om icon when round completes
+  function pulseOmIcon(){
+    if(!omIcon) return;
+    try{
+      omIcon.animate([
+        { transform:'scale(1)', boxShadow:'0 6px 18px rgba(255,79,161,0.22)' },
+        { transform:'scale(1.28)', boxShadow:'0 0 50px rgba(255,179,71,0.95)' },
+        { transform:'scale(1)', boxShadow:'0 6px 18px rgba(255,79,161,0.22)' }
+      ], { duration:1800, easing:'ease-in-out' });
+    } catch(e){}
+  }
+
+  // handle round complete: haptic -> overlay -> sound -> Om pulse
+  function handleRoundComplete(){
+    if(state.haptic && 'vibrate' in navigator){ try{ navigator.vibrate([60,40,60]); } catch(e){} } else {
+      if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); }
     }
 
-    // show overlay and play 4-second Om
+    // show overlay and play long Om (4s)
     showRoundCompleteAnimation();
-    if (state.sound && AudioCtx) {
-      if (AudioCtx.state === 'suspended') AudioCtx.resume();
-      playLongOm(4); // plays 4s
-    }
+    if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playLongOm(4); }
+
+    // pulse Om icon visually
+    pulseOmIcon();
   }
 
-  // persistence helpers
+  // persistence
   function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
   function load(){ try{ const s = JSON.parse(localStorage.getItem(STORAGE_KEY)); if(s) state = {...defaultState, ...s}; }catch(e){} }
 
@@ -358,7 +400,7 @@
       div.className = 'hist-item';
       div.style.display = 'flex';
       div.style.justifyContent = 'space-between';
-      div.innerHTML = `<div style="color:var(--text)">${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`;
+      div.innerHTML = `<div style="color:inherit">${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`;
       historyEl.appendChild(div);
     });
   }
@@ -377,19 +419,15 @@
     if(state.perRound > 0){
       state.inRound = (state.inRound || 0) + delta;
       if(state.inRound < 0){
-        if(state.roundsCompleted > 0){
-          state.roundsCompleted = Math.max(0, state.roundsCompleted - 1);
-          state.inRound = state.perRound + state.inRound;
-        } else state.inRound = 0;
+        if(state.roundsCompleted > 0){ state.roundsCompleted = Math.max(0, state.roundsCompleted - 1); state.inRound = state.perRound + state.inRound; }
+        else state.inRound = 0;
       }
       while(state.inRound >= state.perRound){ state.inRound -= state.perRound; state.roundsCompleted += 1; }
-    } else {
-      state.inRound = state.totalCount; state.roundsCompleted = 0;
-    }
+    } else { state.inRound = state.totalCount; state.roundsCompleted = 0; }
 
     if(record){ const entry = { t:Date.now(), delta, totalCount: state.totalCount, inRound: state.inRound }; state.history.push(entry); state.lastAction = entry; }
 
-    if(state.haptic && vibrationSupported){ try{ navigator.vibrate(30); } catch(e){ if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); } } }
+    if(state.haptic && vibrationSupported){ try{ navigator.vibrate(30); } catch(e){ if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); } } } 
     else { if(state.sound && AudioCtx){ if(AudioCtx.state === 'suspended') AudioCtx.resume(); playRoundChime(); } }
 
     const newRound = state.roundsCompleted > prevRounds;
@@ -398,13 +436,7 @@
     return newRound;
   }
 
-  function undo(){
-    if(!state.lastAction) return;
-    for(let i=state.history.length-1;i>=0;i--){ if(state.history[i].t === state.lastAction.t){ state.history.splice(i,1); break; } }
-    const last = state.history[state.history.length-1];
-    if(last){ state.totalCount = last.totalCount; state.inRound = last.inRound; state.roundsCompleted = Math.floor(state.totalCount/state.perRound); } else { state.totalCount=0; state.inRound=0; state.roundsCompleted=0; }
-    state.lastAction = null; render();
-  }
+  function undo(){ if(!state.lastAction) return; for(let i=state.history.length-1;i>=0;i--){ if(state.history[i].t === state.lastAction.t){ state.history.splice(i,1); break; } } const last = state.history[state.history.length-1]; if(last){ state.totalCount = last.totalCount; state.inRound = last.inRound; state.roundsCompleted = Math.floor(state.totalCount/state.perRound); } else { state.totalCount=0; state.inRound=0; state.roundsCompleted=0; } state.lastAction=null; render(); }
 
   // events
   incBtn.addEventListener('click', ()=> applyDelta(1));
@@ -423,16 +455,19 @@
   tapBtn.addEventListener('click', ()=> applyDelta(1));
   window.addEventListener('keydown', (e) => { if(e.code === 'Space'){ e.preventDefault(); applyDelta(1); } if(e.code === 'Backspace'){ e.preventDefault(); applyDelta(-1); } });
 
-  ['click','touchstart','keydown'].forEach(evt => { window.addEventListener(evt, function resume(){ if(AudioCtx && AudioCtx.state === 'suspended') AudioCtx.resume(); window.removeEventListener(evt, resume); }); });
+  ['click','touchstart','keydown'].forEach(evt => { window.addEventListener(evt,function resume(){ if(AudioCtx && AudioCtx.state === 'suspended') AudioCtx.resume(); window.removeEventListener(evt, resume); }); });
 
-  // Icon check helper
+  // icon check helper
   async function checkIcons(){
     try{
       const r1 = await fetch('./icons/icon-192.png', { method: 'HEAD' });
       const r2 = await fetch('./icons/icon-512.png', { method: 'HEAD' });
       if(r1.ok && r2.ok){ iconNotice.style.display = 'none'; return true; }
-      else { iconNotice.style.display = 'block'; iconNotice.innerText = 'App icons not found: upload ./icons/icon-192.png and ./icons/icon-512.png for proper home-screen icons. (SVG fallback exists.)'; return false; }
-    } catch(e){ iconNotice.style.display = 'block'; iconNotice.innerText = 'Could not check icons (network). Ensure ./icons/icon-192.png and ./icons/icon-512.png are present.'; return false; }
+      iconNotice.style.display = 'block'; iconNotice.innerText = 'App icons not found: upload ./icons/icon-192.png and ./icons/icon-512.png for proper home-screen icons. (SVG fallback exists.)';
+      return false;
+    } catch(e){
+      iconNotice.style.display = 'block'; iconNotice.innerText = 'Could not check icons (network). Ensure ./icons/icon-192.png and ./icons/icon-512.png are present.'; return false;
+    }
   }
 
   // init
@@ -442,10 +477,7 @@
   render();
   checkIcons();
 
-  // register SW
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./service-worker.js').then(reg => console.log('SW registered', reg)).catch(err => console.warn('SW failed', err));
-  }
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js').then(reg => console.log('SW registered', reg)).catch(err => console.warn('SW failed', err)); }
   </script>
 </body>
 </html>
