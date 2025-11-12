@@ -1,12 +1,12 @@
-const CACHE_NAME = 'chant-counter-shell-v2';
+const CACHE_NAME = 'chant-counter-shell-v4';
 const OFFLINE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon-192.svg',
-  '/icons/icon-512.svg'
+  './',
+  './index.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-192.svg',
+  './icons/icon-512.svg'
 ];
 
 self.addEventListener('install', event => {
@@ -27,6 +27,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
@@ -38,8 +39,7 @@ self.addEventListener('fetch', event => {
         }
         return response;
       }).catch(() => {
-        // if navigation request, return cached index.html
-        if (event.request.mode === 'navigate') return caches.match('/index.html');
+        if (event.request.mode === 'navigate') return caches.match('./index.html');
       });
     })
   );
