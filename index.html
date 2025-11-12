@@ -251,36 +251,46 @@
     }
   }
 
-  function showRoundCompleteAnimation(){
-    const plusEl = document.getElementById('roundPlus');
-    if(plusEl) plusEl.textContent = `+${state.perRound || 0}`;
+function showRoundCompleteAnimation() {
+  const plusEl = document.getElementById('roundPlus');
+  if (plusEl) plusEl.textContent = `+${state.perRound || 0}`;
 
-    roundOverlay.innerHTML = `<div style="font-size:20px;font-weight:800;margin-bottom:8px;">Round complete</div>
-                              <div style="font-size:48px;font-weight:900">ॐ · <span id="roundPlus">${state.perRound || 0}</span></div>`;
-    roundOverlay.style.display = 'block';
-    roundOverlay.style.opacity = '0';
-    roundOverlay.style.transform = 'translate(-50%,-50%) scale(0.92)';
+  // Update overlay content
+  roundOverlay.innerHTML = `
+    <div style="font-size:22px;font-weight:800;margin-bottom:8px;">Round complete</div>
+    <div style="font-size:52px;font-weight:900">ॐ · ${state.perRound || 0}</div>
+  `;
 
-    roundOverlay.animate([
-      { opacity: 0, transform: 'translate(-50%,-50%) scale(0.92)' },
-      { opacity: 1, transform: 'translate(-50%,-50%) scale(1.04)' },
-      { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }
-    ], { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1)' });
+  // Make visible with animation
+  roundOverlay.style.display = 'block';
+  roundOverlay.style.opacity = '0';
+  roundOverlay.style.transform = 'translate(-50%,-50%) scale(0.92)';
 
-    createConfettiBurst(12);
+  roundOverlay.animate([
+    { opacity: 0, transform: 'translate(-50%,-50%) scale(0.92)' },
+    { opacity: 1, transform: 'translate(-50%,-50%) scale(1.04)' },
+    { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }
+  ], { duration: 500, easing: 'cubic-bezier(.2,.9,.3,1)' });
 
-    if (roundOverlay.__hideTimeout) {
-      clearTimeout(roundOverlay.__hideTimeout);
-    }
-    roundOverlay.__hideTimeout = setTimeout(() => {
-      roundOverlay.animate([
-        { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' },
-        { opacity: 0, transform: 'translate(-50%,-50%) scale(0.94)' }
-      ], { duration: 420, easing: 'ease' });
-      setTimeout(() => { roundOverlay.style.display = 'none'; }, 460);
-      roundOverlay.__hideTimeout = null;
-    }, 21000); // 21 seconds
+  // Confetti
+  createConfettiBurst(15);
+
+  // If already showing, reset its timeout
+  if (roundOverlay.__hideTimeout) {
+    clearTimeout(roundOverlay.__hideTimeout);
   }
+
+  // Keep visible for full 21 seconds before fading out
+  roundOverlay.__hideTimeout = setTimeout(() => {
+    roundOverlay.animate([
+      { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' },
+      { opacity: 0, transform: 'translate(-50%,-50%) scale(0.94)' }
+    ], { duration: 700, easing: 'ease' });
+
+    setTimeout(() => { roundOverlay.style.display = 'none'; }, 800);
+    roundOverlay.__hideTimeout = null;
+  }, 21000); // 21 seconds (21,000 ms)
+}
 
   // immediate short chime + vibration fallback, then long Om + animation
   function handleRoundComplete(){
