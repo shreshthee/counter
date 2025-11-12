@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Chanting Counter (Japa Counter)</title>
+  <style>
+    :root{
+      --bg:#f5f7fb; --card:#fff; --accent:#2b6cb0; --muted:#6b7280;
+      --danger:#e53e3e;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%; margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#0f172a}
+    .wrap{max-width:900px; margin:28px auto; padding:18px;}
+    header{display:flex; align-items:center; gap:12px; margin-bottom:18px}
+    header h1{font-size:20px; margin:0}
+    .card{background:var(--card); border-radius:12px; padding:20px; box-shadow:0 6px 20px rgba(12,18,37,0.06)}
+    .counter-row{display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap}
+    .big-display{flex:1; min-width:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; border-radius:10px; background:linear-gradient(180deg,#ffffff,#f2f6ff); box-shadow:inset 0 -2px 6px rgba(11,35,80,0.02)}
+    .count{font-size:64px; font-weight:700; letter-spacing:1px}
+    .muted{color:var(--muted); font-size:14px}
+    .controls{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:12px}
+    button{background:var(--accent); color:white; border:none; padding:12px 16px; border-radius:10px; font-weight:600; cursor:pointer; box-shadow:0 6px 12px rgba(43,108,176,0.12)}
+    button.secondary{background:#f3f4f6; color:#0f172a; box-shadow:none;}
+    button.warn{background:var(--danger)}
+    input[type="number"], input[type="text"]{padding:10px 12px; border-radius:8px; border:1px solid #e6eef8; min-width:100px}
+    .goal-row{display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap}
+    progress{width:100%; height:14px; border-radius:8px; overflow:hidden}
+    .meta{display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap}
+    .small{font-size:13px; color:var(--muted)}
+    .history{margin-top:14px; max-height:160px; overflow:auto; border-radius:8px; padding:8px; background:#fbfdff}
+    .hist-item{font-size:13px; padding:6px 8px; border-radius:6px; display:flex; justify-content:space-between; gap:12px}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .footer{margin-top:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap}
+    @media (max-width:560px){ .count{font-size:48px} header h1{font-size:16px} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden><path fill="#2b6cb0" d="M12 2L3 20h18L12 2z"></path></svg>
+      <h1>Chanting Counter</h1>
+    </header>
+
+    <div class="card" role="application" aria-label="Chanting counter application">
+      <div class="counter-row">
+        <div class="big-display" aria-live="polite">
+          <div class="muted">Count</div>
+          <div id="count" class="count" aria-atomic="true">0</div>
+          <div id="progressText" class="muted small">Goal: —</div>
+
+          <div class="controls" style="margin-top:14px;">
+            <button id="dec" aria-label="Decrease by one" class="secondary">−1</button>
+            <button id="inc" aria-label="Increase by one">+1</button>
+            <button id="reset" aria-label="Reset counter" class="warn">Reset</button>
+          </div>
+
+          <div class="meta">
+            <div class="small">Press <kbd>Space</kbd> to increment</div>
+            <div class="small">Long-press + on mobile for continuous count</div>
+          </div>
+        </div>
+
+        <div style="width:320px; min-width:260px;">
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+            <input id="goalInput" type="number" min="1" placeholder="Goal (e.g., 108)" aria-label="Goal count" />
+            <button id="setGoal" class="secondary">Set Goal</button>
+          </div>
+
+          <progress id="progress" max="100" value="0" aria-label="Progress towards goal"></progress>
+
+          <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
+            <input id="addBy" type="number" placeholder="+ Add" aria-label="Add custom amount" />
+            <button id="addBtn" class="secondary">Add</button>
+            <button id="undo" class="secondary">Undo</button>
+          </div>
+
+          <div class="history" id="history" aria-label="History of sessions and increments">
+            <!-- history items -->
+          </div>
+
+          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="export" class="secondary">Export CSV</button>
+            <button id="clearHistory" class="secondary">Clear History</button>
+          </div>
+
+          <div class="footer">
+            <div class="small" id="sessionTimer">Session: 00:00:00</div>
+            <div class="small">Saved locally</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:12px; color:var(--muted); font-size:13px;">Tip: Save this file and host on GitHub Pages or Netlify. Works offline in current tab (localStorage).</p>
+  </div>
+
+  <script>
+    // State and DOM
+    const countEl = document.getElementById('count');
+    const incBtn = document.getElementById('inc');
+    const decBtn = document.getElementById('dec');
+    const resetBtn = document.getElementById('reset');
+    const goalInput = document.getElementById('goalInput');
+    const setGoalBtn = document.getElementById('setGoal');
+    const progress = document.getElementById('progress');
+    const progressText = document.getElementById('progressText');
+    const addBy = document.getElementById('addBy');
+    const addBtn = document.getElementById('addBtn');
+    const historyEl = document.getElementById('history');
+    const exportBtn = document.getElementById('export');
+    const clearHistoryBtn = document.getElementById('clearHistory');
+    const sessionTimerEl = document.getElementById('sessionTimer');
+    const undoBtn = document.getElementById('undo');
+
+    let state = {
+      count: 0,
+      goal: null,
+      history: [], // {t, delta, count}
+      lastAction: null,
+      sessionStart: Date.now()
+    };
+
+    const STORAGE_KEY = 'chant_counter_v1';
+
+    // Load/save
+    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function load(){
+      try{
+        const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if(s){ state = {...state, ...s}; }
+      }catch(e){}
+    }
+
+    // UI updates
+    function render(){
+      countEl.textContent = state.count;
+      if(state.goal && state.goal>0){
+        const percent = Math.min(100, Math.round((state.count / state.goal) * 100));
+        progress.value = percent;
+        progressText.textContent = `Goal: ${state.goal} · ${state.count}/${state.goal} (${percent}%)`;
+      } else {
+        progress.value = 0;
+        progressText.textContent = `Goal: —`;
+      }
+      renderHistory();
+      save();
+    }
+
+    function renderHistory(){
+      historyEl.innerHTML = '';
+      if(state.history.length===0){
+        historyEl.innerHTML = '<div class="small muted">No history yet</div>';
+        return;
+      }
+      state.history.slice().reverse().forEach(item=>{
+        const d = new Date(item.t);
+        const el = document.createElement('div');
+        el.className = 'hist-item';
+        el.innerHTML = `<div style="color:#0f172a">${item.delta>0?'+':''}${item.delta} → ${item.count}</div><div class="small">${d.toLocaleString()}</div>`;
+        historyEl.appendChild(el);
+      });
+    }
+
+    // Sound (WebAudio beep)
+    const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+    function beepQuick(){
+      if(!audioCtx) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 880;
+      g.gain.value = 0.12;
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
+      o.stop(audioCtx.currentTime + 0.14);
+    }
+
+    // Vibrate helper
+    function vibrate(ms=30){ if(navigator.vibrate) navigator.vibrate(ms); }
+
+    // Change count
+    function change(delta, record=true){
+      state.count += delta;
+      if(state.count < 0) state.count = 0;
+      if(record){
+        const entry = {t: Date.now(), delta, count: state.count};
+        state.history.push(entry);
+        state.lastAction = entry;
+      }
+      beepQuick();
+      vibrate(20);
+      render();
+    }
+
+    // Undo last
+    function undo(){
+      if(!state.lastAction) return;
+      const last = state.lastAction;
+      // remove last occurrence in history (last by timestamp)
+      for(let i=state.history.length-1;i>=0;i--){
+        if(state.history[i].t === last.t && state.history[i].delta === last.delta){
+          state.history.splice(i,1);
+          break;
+        }
+      }
+      state.count = Math.max(0, state.count - last.delta);
+      state.lastAction = null;
+      render();
+    }
+
+    // Buttons
+    incBtn.addEventListener('click', ()=> change(1));
+    decBtn.addEventListener('click', ()=> change(-1));
+    resetBtn.addEventListener('click', ()=>{
+      if(!confirm('Reset count to 0?')) return;
+      state.count = 0;
+      state.history.push({t:Date.now(), delta:0, count:0, note:'reset'});
+      render();
+    });
+
+    setGoalBtn.addEventListener('click', ()=>{
+      const g = parseInt(goalInput.value);
+      if(!g || g<=0){ state.goal = null; alert('Enter a goal > 0 or clear to remove'); return; }
+      state.goal = g;
+      render();
+    });
+
+    addBtn.addEventListener('click', ()=>{
+      const n = parseInt(addBy.value);
+      if(!n || isNaN(n)) return;
+      change(n);
+      addBy.value = '';
+    });
+
+    exportBtn.addEventListener('click', ()=>{
+      if(state.history.length===0){ alert('No history to export'); return; }
+      let csv = 'timestamp,delta,count\\n';
+      state.history.forEach(it => {
+        csv += `"${new Date(it.t).toISOString()}",${it.delta},${it.count}\\n`;
+      });
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'chant_history.csv'; document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    clearHistoryBtn.addEventListener('click', ()=>{
+      if(!confirm('Clear history?')) return;
+      state.history = [];
+      render();
+    });
+
+    undoBtn.addEventListener('click', undo);
+
+    // Keyboard (space to increment)
+    window.addEventListener('keydown', (e) => {
+      if(e.code === 'Space'){
+        e.preventDefault();
+        change(1);
+      }
+    });
+
+    // Long-press for + and - (mobile)
+    function attachLongPress(btn, delta){
+      let timer = null, interval = null;
+      const start = (e) => {
+        e.preventDefault();
+        change(delta);
+        timer = setTimeout(()=> {
+          interval = setInterval(()=> change(delta), 120);
+        }, 350);
+      };
+      const stop = () => {
+        if(timer) clearTimeout(timer);
+        if(interval) { clearInterval(interval); interval = null; }
+      };
+      btn.addEventListener('pointerdown', start);
+      btn.addEventListener('pointerup', stop);
+      btn.addEventListener('pointerleave', stop);
+      btn.addEventListener('pointercancel', stop);
+    }
+    attachLongPress(incBtn, 1);
+    attachLongPress(decBtn, -1);
+
+    // Session timer
+    function tickSession(){
+      const diff = Date.now() - state.sessionStart;
+      const s = Math.floor(diff/1000)%60;
+      const m = Math.floor(diff/60000)%60;
+      const h = Math.floor(diff/3600000);
+      sessionTimerEl.textContent = `Session: ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+    setInterval(tickSession, 1000);
+
+    // Init
+    load();
+    if(!state.sessionStart) state.sessionStart = Date.now();
+    render();
+
+    // Friendly first-touch audio autoplay workaround: resume context on first user gesture
+    ['click','touchstart','keydown'].forEach(evt=>{
+      window.addEventListener(evt, function resume(){
+        if(audioCtx && audioCtx.state === 'suspended'){ audioCtx.resume(); }
+        window.removeEventListener(evt, resume);
+      });
+    });
+
+    // Accessibility: focus first button
+    incBtn.focus();
+  </script>
+</body>
+</html>
