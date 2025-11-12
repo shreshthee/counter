@@ -16,97 +16,85 @@
   <style>
     /* ---------- Color palettes & theme variables ---------- */
     :root{
-      /* Morning (light) */
-      --bg-light: #F8FBFF;
-      --card-light: #fff;
+      --bg-light: #F8FAFC;
+      --card-light: #ffffff;
       --text-light: #0B1E2E;
       --main-counter-light: #4EB1FF;
       --accent-light: #FFC45A;
       --subtext-light: #A7FF7A;
       --tap-bg-light: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,79,161,0.06));
-
-      /* Night (dark) */
-      --bg-dark: #101010;
-      --card-dark: linear-gradient(180deg,#0e0d12,#09080c);
-      --text-dark: #EDEDED;
-      --main-counter-dark: #3FFFD4;
-      --accent-dark: #FFB347;
-      --subtext-dark: #EDEDED;
-      --tap-bg-dark: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.00));
+      --om-bg-start: #ffd6e8;
+      --om-bg-end: #ff8bb3;
+      --om-color: #111111;
+      --tap-text: #111111;
+      --card-shadow: rgba(15,20,30,0.04);
+    }
+    .theme-night, @media (prefers-color-scheme: dark) {
+      --bg-light: #101010;
+      --card-light: linear-gradient(180deg,#0e0d12,#09080c);
+      --text-light: #EDEDED;
+      --main-counter-light: #3FFFD4;
+      --accent-light: #FFB347;
+      --subtext-light: #EDEDED;
+      --tap-bg-light: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.00));
+      --om-bg-start: #FFB347;
+      --om-bg-end: #FF7F50;
+      --om-color: #101010;
+      --tap-text: #fff;
+      --card-shadow: rgba(0,0,0,0.55);
     }
 
-    /* base */
     *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;background:var(--bg-light);color:var(--text-light)}
-    @media (prefers-color-scheme: dark){ html,body{background:var(--bg-dark);color:var(--text-dark)} }
-
+    html,body{height:100%;margin:0;background:var(--bg-light);color:var(--text-light);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial}
     .wrap{max-width:920px;margin:18px auto;padding:18px;}
     header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
     header h1{font-size:20px;margin:0;font-weight:800}
 
-    /* Om circle */
     .om-circle{
-      font-family: "Noto Sans Devanagari", "Noto Sans", sans-serif;
+      font-family:"Noto Sans Devanagari",sans-serif;
       font-size:24px;font-weight:900;
       width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-      color:#111;
-      background: radial-gradient(circle, #ffd6e8, #ff8bb3);
-      box-shadow:0 6px 18px rgba(255,79,161,0.22);
-      transition: box-shadow .25s, transform .18s;
+      color:var(--om-color);
+      background: radial-gradient(circle, var(--om-bg-start), var(--om-bg-end));
+      box-shadow:0 6px 18px rgba(0,0,0,0.08); transition: transform .18s, box-shadow .2s;
     }
-    @media (prefers-color-scheme: dark){
-      .om-circle{ background: radial-gradient(circle,#FFB347,#FF7F50); color:#101010; box-shadow:0 8px 26px rgba(255,179,71,0.22); }
-    }
-    @keyframes pulseOm { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
+    @keyframes omPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
+    .om-pulse { animation: omPulse 1.6s cubic-bezier(.2,.9,.3,1) }
 
-    /* card & UI */
-    .card{background:var(--card-light);border-radius:14px;padding:18px;box-shadow:0 12px 36px rgba(0,0,0,0.06)}
-    @media (prefers-color-scheme: dark){ .card{ background:var(--card-dark); } }
+    .card{background:var(--card-light);border-radius:14px;padding:18px;box-shadow:0 12px 36px var(--card-shadow)}
     .count-big{font-size:64px;font-weight:700;text-align:center}
     .small{font-size:13px;color:var(--subtext-light)}
-    @media (prefers-color-scheme: dark){ .small{ color:var(--subtext-dark) } }
 
-    /* bind main counter colors */
-    #count { color: var(--main-counter-light); }
-    @media (prefers-color-scheme: dark){ #count { color: var(--main-counter-dark); } }
+    #count{font-weight:900;color:var(--main-counter-light)}
+    #goalText, .small{color:var(--subtext-light)}
 
-    button{background:var(--accent-light);color:#101010;border:none;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700}
-    button.secondary{background:transparent;color:inherit;border:1px solid rgba(0,0,0,0.06)}
-    @media (prefers-color-scheme: dark){ button{ background:var(--accent-dark); color:#101010 } }
-
-    input[type="number"],input[type="text"]{padding:12px;border-radius:16px;border:1px solid #eee;min-width:120px;background:transparent;color:inherit;font-size:16px}
-    progress{width:100%;height:14px;border-radius:8px;overflow:hidden}
-    progress::-webkit-progress-value{ background: var(--accent-light); }
-    @media (prefers-color-scheme: dark){ progress::-webkit-progress-value{ background:var(--accent-dark); } }
+    button{background:var(--accent-light);color:#111;border:none;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700}
+    button.secondary{background:transparent;border:1px solid rgba(0,0,0,0.06)}
+    input[type="number"], input[type="text"]{padding:12px;border-radius:16px;border:1px solid #eee;min-width:120px;background:transparent;color:inherit;font-size:16px}
+    progress{width:100%;height:14px;border-radius:8px;overflow:hidden;background:rgba(0,0,0,0.06)}
+    progress::-webkit-progress-value{background:var(--accent-light)}
 
     .history{margin-top:14px;max-height:220px;overflow:auto;border-radius:8px;padding:8px;background:rgba(0,0,0,0.03)}
     .hist-item{font-size:13px;padding:8px;border-radius:8px;display:flex;justify-content:space-between;gap:12px}
 
-    /* TAP BUTTON moved upward */
-    .tap-wrap{
-      position:fixed; left:50%; transform:translateX(-50%); bottom:40px; z-index:80; width:96%; max-width:1000px;
-    }
-    .tap-btn{
-      pointer-events:auto; width:100%; border-radius:48px; padding:30px 22px; text-align:center; display:flex; justify-content:space-between; align-items:center; gap:18px; font-weight:900;
-      background: var(--tap-bg-light);
-      border:1px solid rgba(255,79,161,0.12);
-      box-shadow:0 16px 50px rgba(255,79,161,0.08);
-      color:#111;
-      backdrop-filter: blur(8px);
-    }
-    @media (prefers-color-scheme: dark){
-      .tap-btn{ background: var(--tap-bg-dark); border:1px solid rgba(255,255,255,0.03); box-shadow:0 16px 40px rgba(0,0,0,0.5); color: #fff; }
-    }
+    .tap-wrap{ position:fixed; left:50%; transform:translateX(-50%); bottom:40px; z-index:80; width:96%; max-width:1000px; }
+    .tap-btn{ pointer-events:auto; width:100%; border-radius:48px; padding:30px 22px; display:flex; justify-content:space-between; align-items:center; gap:18px; font-weight:900; background: var(--tap-bg-light); border:1px solid rgba(255,79,161,0.12); box-shadow:0 16px 50px rgba(255,79,161,0.08); color:var(--tap-text); backdrop-filter: blur(8px); }
+
     .tap-count{font-size:44px}
     .tap-note{font-size:14px;opacity:0.95}
     .pill{padding:10px 14px;border-radius:28px;background:transparent;border:1px solid rgba(0,0,0,0.06);font-weight:700}
 
     #roundOverlay{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1200; display:none; max-width:760px; width:84%; pointer-events:none; border-radius:20px; padding:22px; text-align:center; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 16px 60px rgba(255,100,150,0.12); }
-    @media (prefers-color-scheme: dark){ #roundOverlay{ background:linear-gradient(180deg, rgba(10,10,10,0.95), rgba(25,25,25,0.95)); color:var(--text-dark) } }
+    @media (prefers-color-scheme: dark){ #roundOverlay{ background:linear-gradient(180deg, rgba(10,10,10,0.95), rgba(25,25,25,0.95)); color:var(--text-light) } }
     @media (prefers-color-scheme: light){ #roundOverlay{ background:linear-gradient(180deg, rgba(255,245,250,0.98), rgba(255,235,245,0.95)); color: #2b0720; } }
 
     .notice{ margin-top:10px; padding:8px 10px; border-radius:10px; background:rgba(255,240,240,0.04); color:var(--subtext-light); font-size:13px }
-    @media (prefers-color-scheme: dark){ .notice{ color:var(--subtext-dark) } }
+    @media (prefers-color-scheme: dark){ .notice{ color:var(--subtext-light) } }
+
+    @media (max-width:420px){
+      #count{font-size:48px}
+      .tap-btn{padding:22px}
+    }
   </style>
 </head>
 <body>
@@ -192,10 +180,17 @@
   </div>
 
   <script>
-  /* ------------- Full script ------------- */
+  /* -------------------------
+     Full integrated script
+     - 4s Om, 21s overlay, end bell
+     - Om pulse on round complete (wired)
+     - dynamic auto theme helper (called at init)
+     - PWA service worker registration
+     ------------------------- */
+
   const $ = id => document.getElementById(id);
 
-  // DOM
+  // DOM refs
   const countEl = $('count'), inRoundEl = $('inRound'), roundsEl = $('roundsCompleted'),
         perRoundInput = $('perRound'), perRoundDisplay = $('perRoundDisplay'),
         goalText = $('goalText'), historyEl = $('history'), progressEl = $('progress'),
@@ -206,10 +201,11 @@
         vibeNotice = $('vibeNotice'), iconNotice = $('iconNotice'), roundOverlay = $('roundOverlay'),
         omIcon = $('omIcon');
 
-  const STORAGE_KEY = 'chant_counter_final_v2';
+  const STORAGE_KEY = 'chant_counter_final_v3';
   const defaultState = { totalCount:0, inRound:0, perRound:0, roundsCompleted:0, goal:null, history:[], lastAction:null, sound:true, haptic:true, sessionStart:Date.now() };
   let state = {...defaultState};
 
+  // Audio context
   const AudioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
 
   // Short chime
@@ -228,7 +224,7 @@
     osc.start(now); osc.stop(now + 0.9);
   }
 
-  // Long Om for 4s (warm drone)
+  // Long Om for 4s
   let __longOmStop = null;
   function playLongOm(seconds = 4) {
     if (!AudioCtx) return;
@@ -259,7 +255,7 @@
     osc1.stop(now + duration + 0.05); osc2.stop(now + duration + 0.05);
 
     __longOmStop = () => {
-      try { osc1.stop(); osc2.stop(); } catch(e) {}
+      try { osc1.stop(); osc2.stop(); } catch (e) {}
       try { gain.gain.exponentialRampToValueAtTime(0.0001, AudioCtx.currentTime + 0.05); } catch(e){}
       __longOmStop = null;
     };
@@ -334,10 +330,8 @@
         roundOverlay.style.pointerEvents = 'none';
         roundOverlay.dataset.visible = '0';
         roundOverlay.__hideTimeout = null;
-        // play end bell
         if(state.sound && AudioCtx) { try{ playEndBell(); } catch(e){} }
       };
-      // fallback safety
       setTimeout(()=>{
         if(roundOverlay.__hideTimeout !== null){
           roundOverlay.style.display = 'none'; roundOverlay.style.pointerEvents='none'; roundOverlay.dataset.visible='0'; roundOverlay.__hideTimeout = null;
@@ -347,16 +341,12 @@
     }, 21000);
   }
 
-  // animate Om icon when round completes
+  // Om icon pulse
   function pulseOmIcon(){
     if(!omIcon) return;
-    try{
-      omIcon.animate([
-        { transform:'scale(1)', boxShadow:'0 6px 18px rgba(255,79,161,0.22)' },
-        { transform:'scale(1.28)', boxShadow:'0 0 50px rgba(255,179,71,0.95)' },
-        { transform:'scale(1)', boxShadow:'0 6px 18px rgba(255,79,161,0.22)' }
-      ], { duration:1800, easing:'ease-in-out' });
-    } catch(e){}
+    omIcon.classList.remove('om-pulse');
+    void omIcon.offsetWidth; // force reflow to retrigger
+    omIcon.classList.add('om-pulse');
   }
 
   // handle round complete: haptic -> overlay -> sound -> Om pulse
@@ -365,11 +355,10 @@
       if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); }
     }
 
-    // show overlay and play long Om (4s)
     showRoundCompleteAnimation();
     if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playLongOm(4); }
 
-    // pulse Om icon visually
+    // pulse Om icon visually on round-complete
     pulseOmIcon();
   }
 
@@ -457,7 +446,7 @@
 
   ['click','touchstart','keydown'].forEach(evt => { window.addEventListener(evt,function resume(){ if(AudioCtx && AudioCtx.state === 'suspended') AudioCtx.resume(); window.removeEventListener(evt, resume); }); });
 
-  // icon check helper
+  // Icon check helper
   async function checkIcons(){
     try{
       const r1 = await fetch('./icons/icon-192.png', { method: 'HEAD' });
@@ -470,6 +459,16 @@
     }
   }
 
+  // Dynamic theme helper (auto switch)
+  function setDynamicTheme(enable){
+    if(!enable) return;
+    // use system preference and time-of-day
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const h = new Date().getHours();
+    const isNight = prefersDark || (h >= 18 || h < 6);
+    document.documentElement.classList.toggle('theme-night', isNight);
+  }
+
   // init
   load();
   if(!state.sessionStart) state.sessionStart = Date.now();
@@ -477,7 +476,13 @@
   render();
   checkIcons();
 
-  if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js').then(reg => console.log('SW registered', reg)).catch(err => console.warn('SW failed', err)); }
+  // enable auto theme switching (call once on load)
+  setDynamicTheme(true);
+
+  // register service worker (PWA)
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./service-worker.js').then(reg => console.log('SW registered', reg)).catch(err => console.warn('SW failed', err));
+  }
   </script>
 </body>
 </html>
