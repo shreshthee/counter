@@ -27,6 +27,8 @@
       --om-text:  #111111;
       --tap-text: #111111;
       --card-shadow: 0 12px 36px rgba(15,20,30,0.04);
+      --secondary-border: rgba(0,0,0,0.06);
+      --secondary-text: #111;
     }
 
     /* night overrides applied when .theme-night on <html> */
@@ -43,6 +45,8 @@
       --om-text:  #101010;
       --tap-text:  #fff;
       --card-shadow: 0 12px 36px rgba(0,0,0,0.55);
+      --secondary-border: rgba(255,255,255,0.12);
+      --secondary-text: #EDEDED;
     }
 
     /* ========== Base layout ========== */
@@ -68,13 +72,13 @@
 
     /* ========== Card UI ========== */
     .card{background:var(--card);border-radius:14px;padding:18px;box-shadow:var(--card-shadow)}
-    .count-big{font-size:64px;font-weight:700;text-align:center}
     .small{font-size:13px;color:var(--subtext)}
-    #count{font-weight:900;color:var(--main-counter);font-size:64px}
-    #goalText{color:var(--subtext);margin-top:6px}
+    #count{font-weight:900;color:var(--main-counter);font-size:64px;text-align:center}
+    #goalText{color:var(--subtext);margin-top:6px;text-align:center}
 
+    /* buttons + secondary styles (secondary adapts to theme now) */
     button{background:var(--accent);color:#111;border:none;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700}
-    button.secondary{background:transparent;border:1px solid rgba(0,0,0,0.06)}
+    button.secondary{background:transparent;border:1px solid var(--secondary-border); color:var(--secondary-text)}
     input[type="number"],input[type="text"]{padding:12px;border-radius:16px;border:1px solid #eee;background:transparent;color:inherit;font-size:16px}
     progress{width:100%;height:14px;border-radius:8px;overflow:hidden;background:rgba(0,0,0,0.04)}
     progress::-webkit-progress-value{background:var(--accent)}
@@ -82,18 +86,18 @@
     .history{margin-top:14px;max-height:220px;overflow:auto;border-radius:8px;padding:8px;background:rgba(0,0,0,0.03)}
     .hist-item{font-size:13px;padding:8px;border-radius:8px;display:flex;justify-content:space-between;gap:12px}
 
-    /* ========== TAP BUTTON (larger oval) ========== */
-    .tap-wrap{ position:fixed; left:50%; transform:translateX(-50%); bottom:44px; z-index:90; width:92%; max-width:1024px; }
+    /* ========== TAP BUTTON (larger elliptical) ========== */
+    .tap-wrap{ position:fixed; left:50%; transform:translateX(-50%); bottom:56px; z-index:90; width:94%; max-width:1200px; }
     .tap-btn{
-      width:100%; border-radius:64px; padding:28px 32px; display:flex; justify-content:space-between; align-items:center; gap:18px; font-weight:900;
+      width:100%; border-radius:96px; padding:34px 36px; display:flex; justify-content:space-between; align-items:center; gap:18px; font-weight:900;
       background: var(--tap-bg); color:var(--tap-text);
       border:1px solid rgba(255,79,161,0.08);
-      box-shadow:0 22px 70px rgba(0,0,0,0.08); backdrop-filter: blur(8px);
-      min-height:72px;
+      box-shadow:0 26px 90px rgba(0,0,0,0.12); backdrop-filter: blur(10px);
+      min-height:86px;
     }
-    .tap-left{ display:flex; align-items:center; gap:14px; }
+    .tap-left{ display:flex; align-items:center; gap:18px; }
     .tap-mark{ color:#ff4fa1; font-weight:900; font-size:18px }
-    .tap-count{ font-size:44px; font-weight:900; color:var(--text) }
+    .tap-count{ font-size:56px; font-weight:900; color:var(--text) }
     .tap-note{ font-size:14px; opacity:.95 }
 
     .pill{padding:10px 14px;border-radius:28px;background:transparent;border:1px solid rgba(0,0,0,0.06);font-weight:700}
@@ -112,8 +116,8 @@
 
     @media (max-width:420px){
       #count{font-size:48px}
-      .tap-btn{padding:18px 20px; min-height:64px}
-      .tap-count{ font-size:36px }
+      .tap-btn{padding:20px 18px; min-height:72px}
+      .tap-count{ font-size:40px }
     }
   </style>
 </head>
@@ -194,13 +198,7 @@
   </div>
 
   <script>
-  /* ==========================
-     Chanting Counter — Final integrated script
-     - Auto theme (system + time)
-     - overlay 10s, Om 3s, end bell
-     - Om pulse
-     - larger oval tap button
-     ========================== */
+  /* Final integrated script (same as previous release) with robust theme listener + minor tweaks */
 
   const $ = id => document.getElementById(id);
   const countEl = $('count'), inRoundEl = $('inRound'), roundsEl = $('roundsCompleted'),
@@ -213,223 +211,95 @@
         vibeNotice = $('vibeNotice'), iconNotice = $('iconNotice'), roundOverlay = $('roundOverlay'),
         omIcon = $('omIcon');
 
-  const STORAGE_KEY = 'chant_counter_final_v4';
+  const STORAGE_KEY = 'chant_counter_final_v5';
   const defaultState = { totalCount:0, inRound:0, perRound:0, roundsCompleted:0, goal:null, history:[], lastAction:null, sound:true, haptic:true, sessionStart:Date.now() };
   let state = {...defaultState};
 
-  // Audio context
   const AudioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
 
-  // short chime (for tap fallback)
   function playRoundChime(){
     if(!AudioCtx) return;
     const now = AudioCtx.currentTime;
-    const o = AudioCtx.createOscillator();
-    const g = AudioCtx.createGain();
-    o.type = 'triangle';
-    o.frequency.setValueAtTime(660, now);
-    o.frequency.exponentialRampToValueAtTime(240, now + 0.45);
-    g.gain.setValueAtTime(0.0001, now);
-    g.gain.exponentialRampToValueAtTime(0.28, now + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
-    o.connect(g); g.connect(AudioCtx.destination);
-    o.start(now); o.stop(now + 0.9);
+    const o = AudioCtx.createOscillator(); const g = AudioCtx.createGain();
+    o.type='triangle'; o.frequency.setValueAtTime(660, now); o.frequency.exponentialRampToValueAtTime(240, now+0.45);
+    g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.28, now+0.02); g.gain.exponentialRampToValueAtTime(0.0001, now+0.8);
+    o.connect(g); g.connect(AudioCtx.destination); o.start(now); o.stop(now+0.9);
   }
 
-  // long Om (3s)
   let __longOmStop = null;
   function playLongOm(seconds = 3){
     if(!AudioCtx) return;
-    if(typeof __longOmStop === 'function'){ try{ __longOmStop(); }catch(e){}; __longOmStop = null; }
-
-    const now = AudioCtx.currentTime;
-    const dur = Math.max(0.5, seconds);
-    const o1 = AudioCtx.createOscillator();
-    const o2 = AudioCtx.createOscillator();
-    const g = AudioCtx.createGain();
-    const f = AudioCtx.createBiquadFilter();
-
-    o1.type='sine'; o2.type='sine';
-    o1.frequency.setValueAtTime(110, now);
-    o2.frequency.setValueAtTime(220, now);
-
+    if(typeof __longOmStop === 'function'){ try{ __longOmStop(); } catch(e){}; __longOmStop = null; }
+    const now = AudioCtx.currentTime; const dur = Math.max(0.5, seconds);
+    const o1 = AudioCtx.createOscillator(), o2 = AudioCtx.createOscillator(), g = AudioCtx.createGain(), f = AudioCtx.createBiquadFilter();
+    o1.type='sine'; o2.type='sine'; o1.frequency.setValueAtTime(110, now); o2.frequency.setValueAtTime(220, now);
     f.type='lowpass'; f.frequency.setValueAtTime(1200, now); f.Q.setValueAtTime(0.8, now);
-
-    g.gain.setValueAtTime(0.0001, now);
-    g.gain.linearRampToValueAtTime(0.18, now + 0.22);
-    g.gain.setValueAtTime(0.18, now + dur - 0.45);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-
-    o1.connect(f); o2.connect(f); f.connect(g); g.connect(AudioCtx.destination);
-    o2.detune.value = 6 * (Math.random() - 0.5);
-
-    o1.start(now); o2.start(now);
-    o1.stop(now + dur + 0.05); o2.stop(now + dur + 0.05);
-
+    g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(0.18, now+0.22); g.gain.setValueAtTime(0.18, now+dur-0.45); g.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+    o1.connect(f); o2.connect(f); f.connect(g); g.connect(AudioCtx.destination); o2.detune.value = 6*(Math.random()-0.5);
+    o1.start(now); o2.start(now); o1.stop(now+dur+0.05); o2.stop(now+dur+0.05);
     __longOmStop = ()=>{ try{o1.stop(); o2.stop();}catch(e){}; try{ g.gain.exponentialRampToValueAtTime(0.0001, AudioCtx.currentTime + 0.05);}catch(e){}; __longOmStop = null; };
     setTimeout(()=>{ __longOmStop = null; }, (dur+0.3)*1000);
   }
 
-  // end bell (short) after overlay finishes
   function playEndBell(){
     if(!AudioCtx) return;
-    const now = AudioCtx.currentTime;
-    const a = AudioCtx.createOscillator();
-    const b = AudioCtx.createOscillator();
-    const g = AudioCtx.createGain();
-    const h = AudioCtx.createBiquadFilter();
-
-    a.type='sine'; b.type='sine';
-    a.frequency.setValueAtTime(1100, now); b.frequency.setValueAtTime(1320, now);
-    g.gain.setValueAtTime(0.0001, now);
-    g.gain.exponentialRampToValueAtTime(0.28, now + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+    const now = AudioCtx.currentTime; const a = AudioCtx.createOscillator(), b = AudioCtx.createOscillator(), g = AudioCtx.createGain(), h = AudioCtx.createBiquadFilter();
+    a.type='sine'; b.type='sine'; a.frequency.setValueAtTime(1100, now); b.frequency.setValueAtTime(1320, now);
+    g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.28, now+0.01); g.gain.exponentialRampToValueAtTime(0.0001, now+0.8);
     h.type='highpass'; h.frequency.setValueAtTime(600, now);
-
-    a.connect(h); b.connect(h); h.connect(g); g.connect(AudioCtx.destination);
-    a.start(now); b.start(now); a.stop(now + 0.75); b.stop(now + 0.75);
+    a.connect(h); b.connect(h); h.connect(g); g.connect(AudioCtx.destination); a.start(now); b.start(now); a.stop(now+0.75); b.stop(now+0.75);
   }
 
-  // small visual confetti
-  function createConfettiBurst(n){
-    for(let i=0;i<n;i++){
-      const d = document.createElement('div');
-      d.style.position='fixed';
-      d.style.left = (50 + (Math.random()*60 - 30)) + '%';
-      d.style.top  = (50 + (Math.random()*10 - 5)) + '%';
-      const s = (6 + Math.random()*8) + 'px';
-      d.style.width = d.style.height = s;
-      d.style.background = ['#ffd6e8','#ff9acb','#ffc1e3','#ffbfdc'][Math.floor(Math.random()*4)];
-      d.style.borderRadius = '3px';
-      d.style.zIndex = 1210;
-      document.body.appendChild(d);
-      const dx = (Math.random()*160 - 80);
-      const dy = -80 - Math.random()*160;
-      d.animate([{ transform:'translate(0,0) rotate(0deg)', opacity:1 }, { transform:`translate(${dx}px, ${dy}px) rotate(${Math.random()*360}deg)`, opacity:0 }], { duration: 900 + Math.random()*500, easing:'cubic-bezier(.2,.8,.2,1)'});
-      setTimeout(()=> d.remove(), 1500);
-    }
-  }
+  function createConfettiBurst(n){ for(let i=0;i<n;i++){ const d=document.createElement('div'); d.style.position='fixed'; d.style.left=(50+(Math.random()*60-30))+'%'; d.style.top=(50+(Math.random()*10-5))+'%'; const s=(6+Math.random()*8)+'px'; d.style.width=d.style.height=s; d.style.background = ['#ffd6e8','#ff9acb','#ffc1e3','#ffbfdc'][Math.floor(Math.random()*4)]; d.style.borderRadius='3px'; d.style.zIndex=1210; document.body.appendChild(d); const dx=(Math.random()*160-80); const dy=-80-Math.random()*160; d.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:`translate(${dx}px, ${dy}px) rotate(${Math.random()*360}deg)`,opacity:0}],{duration:900+Math.random()*500,easing:'cubic-bezier(.2,.8,.2,1)'}); setTimeout(()=>d.remove(),1500);} }
 
-  // Overlay: visible 10s, fade, then bell
   function showRoundCompleteAnimation(){
     if(!roundOverlay) return;
     roundOverlay.className = document.documentElement.classList.contains('theme-night') ? 'overlay-dark' : 'overlay-light';
     roundOverlay.innerHTML = `<div style="font-size:20px;font-weight:800;margin-bottom:8px;">Round complete</div>
                               <div style="font-size:52px;font-weight:900;letter-spacing:1px">ॐ · <span id="roundPlus">${state.perRound || 0}</span></div>`;
-
-    try{ if(roundOverlay.__hideTimeout){ clearTimeout(roundOverlay.__hideTimeout); roundOverlay.__hideTimeout = null; } }catch(e){}
-
-    roundOverlay.style.display = 'block';
-    roundOverlay.style.opacity = '1';
-    roundOverlay.style.pointerEvents = 'none';
-    roundOverlay.animate([{ opacity:0, transform:'translate(-50%,-50%) scale(0.94)' }, { opacity:1, transform:'translate(-50%,-50%) scale(1.03)' }, { opacity:1, transform:'translate(-50%,-50%) scale(1)' }], { duration:380, easing:'cubic-bezier(.2,.9,.3,1)', fill:'forwards' });
-
+    try{ if(roundOverlay.__hideTimeout){ clearTimeout(roundOverlay.__hideTimeout); roundOverlay.__hideTimeout = null; } } catch(e){}
+    roundOverlay.style.display='block'; roundOverlay.style.opacity='1'; roundOverlay.style.pointerEvents='none';
+    roundOverlay.animate([{opacity:0,transform:'translate(-50%,-50%) scale(0.94)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.03)'},{opacity:1,transform:'translate(-50%,-50%) scale(1)'}],{duration:380,easing:'cubic-bezier(.2,.9,.3,1)',fill:'forwards'});
     try{ createConfettiBurst(12); } catch(e){}
-
-    // keep visible 10s, then fade and play end bell
-    roundOverlay.__hideTimeout = setTimeout(()=>{
-      const anim = roundOverlay.animate([{ opacity:1, transform:'translate(-50%,-50%) scale(1)' }, { opacity:0, transform:'translate(-50%,-50%) scale(0.94)' }], { duration:520, easing:'ease', fill:'forwards' });
-      anim.onfinish = ()=>{
-        roundOverlay.style.display = 'none';
-        roundOverlay.__hideTimeout = null;
-        if(state.sound && AudioCtx) try{ playEndBell(); } catch(e){}
-      };
-      // fallback
-      setTimeout(()=>{
-        if(roundOverlay.__hideTimeout !== null){
-          roundOverlay.style.display='none'; roundOverlay.__hideTimeout = null;
-          if(state.sound && AudioCtx) try{ playEndBell(); } catch(e){}
-        }
-      }, 800);
-    }, 10000); // 10,000 ms = 10 seconds
+    roundOverlay.__hideTimeout = setTimeout(()=>{ const anim = roundOverlay.animate([{opacity:1,transform:'translate(-50%,-50%) scale(1)'},{opacity:0,transform:'translate(-50%,-50%) scale(0.94)'}],{duration:520,easing:'ease',fill:'forwards'}); anim.onfinish = ()=>{ roundOverlay.style.display='none'; roundOverlay.__hideTimeout = null; if(state.sound && AudioCtx) try{ playEndBell(); }catch(e){} }; setTimeout(()=>{ if(roundOverlay.__hideTimeout !== null){ roundOverlay.style.display='none'; roundOverlay.__hideTimeout = null; if(state.sound && AudioCtx) try{ playEndBell(); }catch(e){} } },800); },10000);
   }
 
-  // Om badge visual pulse
-  function pulseOmIcon(){
-    if(!omIcon) return;
-    omIcon.classList.remove('om-pulse');
-    void omIcon.offsetWidth;
-    omIcon.classList.add('om-pulse');
-  }
+  function pulseOmIcon(){ if(!omIcon) return; omIcon.classList.remove('om-pulse'); void omIcon.offsetWidth; omIcon.classList.add('om-pulse'); }
 
-  // When round completes: vibration/sound -> overlay -> long Om(3s) -> pulse
   function handleRoundComplete(){
     if(state.haptic && 'vibrate' in navigator){ try{ navigator.vibrate([50,40,50]); }catch(e){} }
     else { if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); } }
-
     showRoundCompleteAnimation();
-
     if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playLongOm(3); }
-
     pulseOmIcon();
   }
 
-  // persistence
   function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  function load(){ try{ const s = JSON.parse(localStorage.getItem(STORAGE_KEY)); if(s) state = {...defaultState, ...s}; }catch(e){} }
+  function load(){ try{ const s=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(s) state = {...defaultState, ...s}; }catch(e){} }
 
-  function render(){
-    countEl.textContent = state.totalCount;
-    inRoundEl.textContent = state.inRound;
-    perRoundDisplay.textContent = state.perRound || 0;
-    roundsEl.textContent = state.roundsCompleted;
-    progressEl.value = state.goal ? Math.min(100, Math.round((state.totalCount/state.goal)*100)) : (state.perRound ? Math.min(100, Math.floor((state.inRound/state.perRound)*100)) : 0);
-    goalText.textContent = state.goal ? `Goal: ${state.goal} · ${state.totalCount}/${state.goal} (${Math.min(100, Math.round((state.totalCount/state.goal)*100))}%)` : 'Goal: —';
-    soundToggle.checked = state.sound; hapticToggle.checked = state.haptic;
-    perRoundInput.value = state.perRound || '';
-    renderHistory();
-    updateVibeNotice(); save();
-  }
+  function render(){ countEl.textContent = state.totalCount; inRoundEl.textContent = state.inRound; perRoundDisplay.textContent = state.perRound || 0; roundsEl.textContent = state.roundsCompleted; progressEl.value = state.goal ? Math.min(100, Math.round((state.totalCount/state.goal)*100)) : (state.perRound ? Math.min(100, Math.floor((state.inRound/state.perRound)*100)) : 0); goalText.textContent = state.goal ? `Goal: ${state.goal} · ${state.totalCount}/${state.goal} (${Math.min(100, Math.round((state.totalCount/state.goal)*100))}%)` : 'Goal: —'; soundToggle.checked = state.sound; hapticToggle.checked = state.haptic; perRoundInput.value = state.perRound || ''; renderHistory(); updateVibeNotice(); save(); }
 
-  function renderHistory(){
-    historyEl.innerHTML = '';
-    if(!state.history || state.history.length === 0){ historyEl.innerHTML = '<div class="small">No history yet</div>'; return; }
-    state.history.slice().reverse().forEach(it=>{
-      const d = new Date(it.t);
-      const div = document.createElement('div');
-      div.className = 'hist-item';
-      div.style.display = 'flex';
-      div.style.justifyContent = 'space-between';
-      div.innerHTML = `<div>${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`;
-      historyEl.appendChild(div);
-    });
-  }
+  function renderHistory(){ historyEl.innerHTML=''; if(!state.history||state.history.length===0){ historyEl.innerHTML='<div class="small">No history yet</div>'; return; } state.history.slice().reverse().forEach(it=>{ const d=new Date(it.t); const div=document.createElement('div'); div.className='hist-item'; div.style.display='flex'; div.style.justifyContent='space-between'; div.innerHTML=`<div>${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`; historyEl.appendChild(div); }); }
 
   const vibrationSupported = 'vibrate' in navigator;
   function updateVibeNotice(){ if(!vibrationSupported) vibeNotice.textContent = 'Note: vibration unavailable in this browser (iOS Safari often does not support it). Sound fallback will be used.'; else vibeNotice.textContent=''; }
 
-  // apply change and compute rounds
   function applyDelta(delta, record=true){
     const prevRounds = state.roundsCompleted;
-    state.totalCount = (state.totalCount || 0) + delta;
-    if(state.totalCount < 0) state.totalCount = 0;
-
-    if(linkPerRound.checked) state.perRound = state.goal || 0;
-    else state.perRound = parseInt(perRoundInput.value) || state.perRound || 0;
-
+    state.totalCount = (state.totalCount || 0) + delta; if(state.totalCount < 0) state.totalCount = 0;
+    if(linkPerRound.checked) state.perRound = state.goal || 0; else state.perRound = parseInt(perRoundInput.value) || state.perRound || 0;
     if(state.perRound > 0){
       state.inRound = (state.inRound || 0) + delta;
-      if(state.inRound < 0){
-        if(state.roundsCompleted > 0){ state.roundsCompleted = Math.max(0, state.roundsCompleted - 1); state.inRound = state.perRound + state.inRound; } else state.inRound = 0;
-      }
+      if(state.inRound < 0){ if(state.roundsCompleted > 0){ state.roundsCompleted = Math.max(0, state.roundsCompleted - 1); state.inRound = state.perRound + state.inRound; } else state.inRound = 0; }
       while(state.inRound >= state.perRound){ state.inRound -= state.perRound; state.roundsCompleted += 1; }
     } else { state.inRound = state.totalCount; state.roundsCompleted = 0; }
-
-    if(record){ const entry = { t: Date.now(), delta, totalCount: state.totalCount, inRound: state.inRound }; state.history.push(entry); state.lastAction = entry; }
-
-    // feedback
-    if(state.haptic && vibrationSupported){ try{ navigator.vibrate(28); }catch(e){ if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); } } }
-    else { if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); } }
-
-    const newRound = state.roundsCompleted > prevRounds;
-    render();
-    if(newRound) handleRoundComplete();
-    return newRound;
+    if(record){ const entry={t:Date.now(), delta, totalCount: state.totalCount, inRound: state.inRound}; state.history.push(entry); state.lastAction = entry; }
+    if(state.haptic && vibrationSupported){ try{ navigator.vibrate(28); }catch(e){ if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); } } } else { if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); } }
+    const newRound = state.roundsCompleted > prevRounds; render(); if(newRound) handleRoundComplete(); return newRound;
   }
 
   function undo(){ if(!state.lastAction) return; for(let i=state.history.length-1;i>=0;i--){ if(state.history[i].t === state.lastAction.t){ state.history.splice(i,1); break; } } const last = state.history[state.history.length-1]; if(last){ state.totalCount = last.totalCount; state.inRound = last.inRound; state.roundsCompleted = Math.floor(state.totalCount/state.perRound); } else { state.totalCount=0; state.inRound=0; state.roundsCompleted=0; } state.lastAction=null; render(); }
 
-  // events
   incBtn.addEventListener('click', ()=> applyDelta(1));
   decBtn.addEventListener('click', ()=> applyDelta(-1));
   resetBtn.addEventListener('click', ()=> { if(confirm('Reset total and in-round counts?')){ state.totalCount=0; state.inRound=0; state.roundsCompleted=0; state.history.push({t:Date.now(), delta:0, totalCount:0, inRound:0, note:'reset'}); render(); }});
@@ -439,59 +309,38 @@
   clearHistoryTop.addEventListener('click', ()=> { if(confirm('Clear history?')){ state.history=[]; render(); }});
   soundToggle.addEventListener('change', e => { state.sound = e.target.checked; save(); });
   hapticToggle.addEventListener('change', e => { state.haptic = e.target.checked; save(); });
-
   perRoundInput.addEventListener('change', ()=> { const v = parseInt(perRoundInput.value); if(!linkPerRound.checked && v && v>0){ state.perRound = v; state.roundsCompleted = Math.floor(state.totalCount/state.perRound); state.inRound = state.totalCount % state.perRound; render(); }});
   linkPerRound.addEventListener('change', ()=> { if(linkPerRound.checked){ state.perRound = state.goal || 0; perRoundInput.disabled = true; } else { perRoundInput.disabled = false; } render(); });
-
   tapBtn.addEventListener('click', ()=> applyDelta(1));
   window.addEventListener('keydown', (e) => { if(e.code === 'Space'){ e.preventDefault(); applyDelta(1); } if(e.code === 'Backspace'){ e.preventDefault(); applyDelta(-1); } });
-
-  // resume audio on first interaction
   ['click','touchstart','keydown'].forEach(evt => { window.addEventListener(evt,function resume(){ if(AudioCtx && AudioCtx.state === 'suspended') AudioCtx.resume(); window.removeEventListener(evt, resume); }); });
 
-  // icons check
-  async function checkIcons(){
-    try{
-      const r1 = await fetch('./icons/icon-192.png', { method:'HEAD' });
-      const r2 = await fetch('./icons/icon-512.png', { method:'HEAD' });
-      if(r1.ok && r2.ok){ iconNotice.style.display='none'; return true; }
-      iconNotice.style.display='block'; iconNotice.innerText='App icons not found: upload ./icons/icon-192.png and ./icons/icon-512.png for proper home-screen icons.';
-      return false;
-    } catch(e){ iconNotice.style.display='block'; iconNotice.innerText='Could not check icons (network). Ensure ./icons/icon-192.png and ./icons/icon-512.png are present.'; return false; }
-  }
+  async function checkIcons(){ try{ const r1 = await fetch('./icons/icon-192.png', { method:'HEAD' }); const r2 = await fetch('./icons/icon-512.png', { method:'HEAD' }); if(r1.ok && r2.ok){ iconNotice.style.display='none'; return true; } iconNotice.style.display='block'; iconNotice.innerText='App icons not found: upload ./icons/icon-192.png and ./icons/icon-512.png for proper home-screen icons.'; return false;}catch(e){ iconNotice.style.display='block'; iconNotice.innerText='Could not check icons (network). Ensure ./icons/icon-192.png and ./icons/icon-512.png are present.'; return false;} }
 
-  // ========== Auto theme (system preference + time heuristic) ==========
-  // call setDynamicTheme(true) at init
+  // Auto theme: system + time-of-day; listens to change events reliably
   function setDynamicTheme(enable){
     if(!enable) return;
     const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
-    // function to apply theme
     function apply(){
       const prefersDark = mq ? mq.matches : false;
       const h = new Date().getHours();
       const isNight = prefersDark || (h >= 18 || h < 6);
       document.documentElement.classList.toggle('theme-night', isNight);
     }
-    // initial apply
     apply();
-    // listen to changes in system preference
     if(mq && mq.addEventListener) mq.addEventListener('change', apply);
     else if(mq && mq.addListener) mq.addListener(apply);
-    // also re-evaluate at hour-change (simple timer) to pick up time-of-day shifts
-    setInterval(apply, 60 * 1000); // every minute (cheap)
+    setInterval(apply, 60*1000);
   }
 
-  // init
   load();
   if(!state.sessionStart) state.sessionStart = Date.now();
   if(linkPerRound.checked){ perRoundInput.disabled = true; if(state.goal) state.perRound = state.goal; }
   render();
   checkIcons();
 
-  // enable auto theme switching
   setDynamicTheme(true);
 
-  // register service worker (if present)
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./service-worker.js').then(reg => console.log('SW registered', reg)).catch(err => console.warn('SW registration failed', err));
   }
