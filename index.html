@@ -3,498 +3,505 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Chanting Counter (Japa Counter)</title>
-  <meta name="description" content="Simple chanting / japa counter — big tap, history, export, local save, rosy glow theme." />
+  <title>Chanting Counter — with Om & Rounds</title>
   <style>
-    /* ================== THEME & LAYOUT ================== */
     :root{
-      --bg:#fff6fb;           /* rosy page background */
-      --card:#fff;
-      --accent:#ec4899;       /* rosy accent (pink) */
-      --muted:#6b7280;
-      --success:#16a34a;
-      --danger:#e53e3e;
+      --bg:#fff7fb; --card:#fff; --accent:#ff4fa1; --muted:#6b6f76;
+      --glass: rgba(255,79,161,0.12);
+      --glass-2: rgba(255,255,255,0.6);
+      --danger:#ef4444;
     }
     *{box-sizing:border-box}
-    html,body{height:100%; margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#0f172a}
-    .wrap{max-width:980px; margin:28px auto; padding:18px;}
-    header{display:flex; align-items:center; gap:12px; margin-bottom:18px}
+    html,body{height:100%; margin:0; font-family:Inter, "Segoe UI", Roboto, Arial; background:var(--bg); color:#0f172a}
+    .wrap{max-width:920px; margin:20px auto; padding:18px;}
+    header{display:flex; align-items:center; gap:12px; margin-bottom:10px}
     header h1{font-size:20px; margin:0}
-    .card{background:var(--card); border-radius:12px; padding:20px; box-shadow:0 6px 20px rgba(12,18,37,0.06)}
-    .counter-row{display:flex; align-items:center; gap:12px; justify-content:space-between; flex-wrap:wrap}
-    .big-display{flex:1; min-width:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; border-radius:10px; background:linear-gradient(180deg,#fff7fb,#fff0f6); box-shadow:0 12px 30px rgba(236,72,153,0.08), inset 0 -6px 18px rgba(236,72,153,0.03); border:1px solid rgba(236,72,153,0.06)}
-    .count{font-size:64px; font-weight:700; letter-spacing:1px}
-    .muted{color:var(--muted); font-size:14px}
-    .controls{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:12px}
-    button{background:var(--accent); color:white; border:none; padding:12px 16px; border-radius:10px; font-weight:600; cursor:pointer; box-shadow:0 6px 12px rgba(236,72,153,0.12)}
-    button.secondary{background:#fff; color:#0f172a; box-shadow:0 1px 4px rgba(12,18,37,0.04); border:1px solid rgba(0,0,0,0.04)}
+    .card{background:var(--card); border-radius:14px; padding:18px; box-shadow:0 10px 30px rgba(22,28,45,0.06)}
+    .count-big{font-size:64px; font-weight:700; text-align:center}
+    .muted{color:var(--muted)}
+    .controls{display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap}
+    button{background:var(--accent); color:white; border:none; padding:12px 16px; border-radius:12px; font-weight:600; cursor:pointer}
+    button.secondary{background:#fff; color:#111; border:1px solid #eef2f7; box-shadow:none}
     button.warn{background:var(--danger)}
-    button.ghost{background:transparent; border:1px solid #e6eef8; color:inherit}
-    input[type="number"], input[type="text"]{padding:10px 12px; border-radius:8px; border:1px solid #f3e8ef; min-width:100px}
-    progress{width:100%; height:14px; border-radius:8px; overflow:hidden; appearance:none}
-    progress::-webkit-progress-bar{background:#fff0f6; border-radius:8px}
-    progress::-webkit-progress-value{background:linear-gradient(90deg,#f472b6,#ec4899); border-radius:8px}
-    progress.success::-webkit-progress-value{background:linear-gradient(90deg,#34d399,#16a34a)}
-    .meta{display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap}
-    .small{font-size:13px; color:var(--muted)}
-    .history{margin-top:14px; max-height:200px; overflow:auto; border-radius:8px; padding:8px; background:#fff7fb}
-    .hist-item{font-size:13px; padding:8px; border-radius:6px; display:flex; justify-content:space-between; gap:12px; align-items:center}
+    input[type="number"], input[type="text"]{padding:10px 12px; border-radius:8px; border:1px solid #eee; min-width:100px}
+    progress{width:100%; height:14px; border-radius:8px; overflow:hidden}
     .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .footer{margin-top:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap}
-    .muted-ghost{color:#9aa3b2}
-    .pill{display:inline-flex; gap:8px; align-items:center; padding:6px 8px; border-radius:999px; background:#fff; border:1px solid rgba(0,0,0,0.04); box-shadow:0 2px 6px rgba(236,72,153,0.06)}
-    .focus-ring:focus{outline:3px solid rgba(236,72,153,0.14); outline-offset:2px; border-radius:8px}
-    .visually-hidden{position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden}
-    @media (max-width:560px){ .count{font-size:48px} header h1{font-size:16px} .big-display{padding:18px} }
-
-    /* BIG TAP button (eyes-closed friendly) */
-    .big-tap {
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: 22px;
-      z-index: 9999;
-      width: min(92%, 650px);
-      height: 88px;
-      border-radius: 20px;
-      background: linear-gradient(180deg, rgba(236,72,153,0.16), rgba(236,72,153,0.06));
-      border: 1px solid rgba(236,72,153,0.18);
-      color: #111827;
-      font-weight: 800;
-      font-size: 22px;
+    .small{font-size:13px; color:var(--muted)}
+    .history{margin-top:14px; max-height:160px; overflow:auto; border-radius:8px; padding:8px; background:#fffafc}
+    .hist-item{font-size:13px; padding:8px; border-radius:8px; display:flex; justify-content:space-between; gap:12px}
+    .settings{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    /* Big translucent tap button (mobile) */
+    .tap-wrap{
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:18px;
+      z-index:60;
+      width:86%;
+      max-width:760px;
+      pointer-events:none; /* inner button will accept pointer */
+    }
+    .tap-btn{
+      pointer-events:auto;
+      width:100%;
+      border-radius:34px;
+      padding:18px 12px;
+      text-align:center;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,79,161,0.06));
+      border: 1px solid rgba(255,79,161,0.12);
+      box-shadow: 0 8px 30px rgba(255,79,161,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
+      font-size:22px;
+      font-weight:700;
+      color:#1f1f29;
       display:flex;
       align-items:center;
       justify-content:center;
-      box-shadow: 0 8px 24px rgba(236,72,153,0.12);
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
+      gap:14px;
     }
-    .big-tap .label { font-size: 14px; opacity: 0.9; margin-left: 8px; font-weight:600; }
-    .big-tap:active { transform: translateX(-50%) translateY(1px); box-shadow:0 6px 16px rgba(236,72,153,0.14) }
-    .body-bottom-padding { padding-bottom: 120px !important; }
-
+    .tap-count{font-size:28px; font-weight:800; color:#111}
+    .small-pill{padding:8px 12px; border-radius:20px; background:#fff; border:1px solid #f0f0f3; font-weight:600}
+    @media (max-width:560px){
+      .count-big{font-size:46px}
+      .tap-btn{padding:16px; font-size:18px}
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden><path fill="#ec4899" d="M12 2L3 20h18L12 2z"></path></svg>
+      <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden><path fill="#ff4fa1" d="M12 2L3 20h18L12 2z"></path></svg>
       <h1>Chanting Counter</h1>
     </header>
 
     <div class="card" role="application" aria-label="Chanting counter application">
-      <div class="counter-row">
-        <!-- LEFT: BIG DISPLAY (Rosy glow ON by default) -->
-        <div class="big-display" aria-live="polite">
-          <div class="muted">Count</div>
-          <div id="count" class="count" aria-atomic="true">0</div>
-          <div id="progressText" class="muted small">Goal: —</div>
+      <div style="text-align:center; padding:8px 12px;">
+        <div class="small muted">Count</div>
+        <div id="count" class="count-big" aria-atomic="true">0</div>
+        <div id="goalText" class="muted small">Goal: —</div>
+      </div>
 
-          <div class="controls" style="margin-top:14px;">
-            <button id="dec" aria-label="Decrease by one" class="secondary focus-ring">−1</button>
-            <button id="inc" aria-label="Increase by one" class="focus-ring">+1</button>
-            <button id="reset" aria-label="Reset counter" class="warn focus-ring">Reset</button>
-          </div>
+      <div class="controls">
+        <button id="dec" class="secondary" aria-label="Decrease">−1</button>
+        <button id="inc" aria-label="Increase">+1</button>
+        <button id="reset" class="warn" aria-label="Reset">Reset</button>
+      </div>
 
-          <div class="meta">
-            <div class="small">Press <kbd>Space</kbd> to increment</div>
-            <div class="small">Press <kbd>Backspace</kbd> to decrement</div>
-            <div class="small">Tap the big button at the bottom for +1</div>
-          </div>
-        </div>
+      <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <input id="goalInput" type="number" min="1" placeholder="Goal (e.g., 108)" aria-label="Goal count" />
+        <button id="setGoal" class="secondary">Set Goal</button>
 
-        <!-- RIGHT: Controls, history, export -->
-        <div style="width:340px; min-width:260px;">
-          <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-            <input id="goalInput" type="number" min="1" placeholder="Goal (e.g., 108)" aria-label="Goal count" class="focus-ring" />
-            <button id="setGoal" class="secondary focus-ring">Set Goal</button>
-          </div>
+        <input id="perRound" type="number" min="1" placeholder="Per round (108)" aria-label="Per round" style="width:120px"/>
+        <button id="toggleAutoRound" class="secondary">Auto-round: On</button>
+      </div>
 
-          <progress id="progress" max="100" value="0" aria-label="Progress towards goal"></progress>
+      <div style="margin-top:10px;">
+        <progress id="progress" max="100" value="0" aria-label="Progress"></progress>
+      </div>
 
-          <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
-            <input id="addBy" type="number" placeholder="+ Add" aria-label="Add custom amount" class="focus-ring" />
-            <button id="addBtn" class="secondary focus-ring">Add</button>
-            <button id="undo" class="secondary focus-ring">Undo</button>
+      <div style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <input id="addBy" type="number" placeholder="+ Add" aria-label="Add custom amount" />
+        <button id="addBtn" class="secondary">Add</button>
+        <button id="undo" class="secondary">Undo</button>
 
-            <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-              <label class="pill" title="Enable sound">
-                <input id="soundToggle" type="checkbox" aria-label="Enable sound" />
-                <span style="font-size:13px;color:var(--muted)">Sound</span>
-              </label>
-              <button id="wakeBtn" class="secondary focus-ring" title="Keep screen on">Keep screen on</button>
-            </div>
-          </div>
+        <label class="small" style="display:flex; gap:8px; align-items:center;">
+          <input id="soundToggle" type="checkbox" checked /> Om sound
+        </label>
 
-          <div class="history" id="history" aria-label="History of sessions and increments">
-            <!-- history items -->
-          </div>
+        <label class="small" style="display:flex; gap:8px; align-items:center;">
+          <input id="keepScreen" type="checkbox" /> Keep screen on
+        </label>
+      </div>
 
-          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button id="export" class="secondary focus-ring">Export CSV</button>
-            <button id="clearHistory" class="secondary focus-ring">Clear History</button>
-            <div style="margin-left:auto" class="small muted-ghost" id="sessionsCount">Entries: 0</div>
-          </div>
+      <div style="margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <div class="small-pill">Rounds completed: <span id="roundsCompleted">0</span></div>
+        <div class="small-pill">In-round: <span id="inRound">0</span>/<span id="perRoundDisplay">108</span></div>
+        <div class="small" id="sessionTimer">Session: 00:00:00</div>
+      </div>
 
-          <div class="footer">
-            <div class="small" id="sessionTimer">Session: 00:00:00</div>
-            <div class="small">Saved locally</div>
-          </div>
-        </div>
+      <div class="history" id="history" aria-label="History">
+        <!-- history -->
+      </div>
+
+      <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button id="export" class="secondary">Export CSV</button>
+        <button id="clearHistory" class="secondary">Clear History</button>
       </div>
     </div>
-
-    <p style="margin-top:12px; color:var(--muted); font-size:13px;">Tip: Save this file and host on GitHub Pages or Netlify. Works offline in current tab (localStorage).</p>
   </div>
 
-  <!-- BIG tactile button for eyes-closed tapping (single tap only) -->
-  <button id="bigTap" class="big-tap" aria-label="Big tap to increment">
-    +1 <span class="label" aria-hidden>(tap)</span>
-  </button>
+  <!-- Big translucent tap button -->
+  <div class="tap-wrap" aria-hidden="false">
+    <div id="tap" class="tap-btn" role="button" aria-label="+1 (tap)">
+      <div style="display:flex; flex-direction:column; align-items:center;">
+        <div style="font-size:14px; color:#7a2b4f; opacity:0.9">Tap</div>
+        <div class="tap-count">+1</div>
+      </div>
+      <div style="margin-left:auto;">
+        <div class="small" style="opacity:0.85">tap</div>
+      </div>
+    </div>
+  </div>
 
-  <script>
-    /* ================== State & DOM Refs ================== */
-    const countEl = document.getElementById('count');
-    const incBtn = document.getElementById('inc');
-    const decBtn = document.getElementById('dec');
-    const resetBtn = document.getElementById('reset');
-    const goalInput = document.getElementById('goalInput');
-    const setGoalBtn = document.getElementById('setGoal');
-    const progress = document.getElementById('progress');
-    const progressText = document.getElementById('progressText');
-    const addBy = document.getElementById('addBy');
-    const addBtn = document.getElementById('addBtn');
-    const historyEl = document.getElementById('history');
-    const exportBtn = document.getElementById('export');
-    const clearHistoryBtn = document.getElementById('clearHistory');
-    const sessionTimerEl = document.getElementById('sessionTimer');
-    const undoBtn = document.getElementById('undo');
-    const soundToggle = document.getElementById('soundToggle');
-    const sessionsCountEl = document.getElementById('sessionsCount');
-    const bigTap = document.getElementById('bigTap');
-    const wakeBtn = document.getElementById('wakeBtn');
+<script>
+  // DOM
+  const countEl = document.getElementById('count');
+  const incBtn = document.getElementById('inc');
+  const decBtn = document.getElementById('dec');
+  const resetBtn = document.getElementById('reset');
+  const goalInput = document.getElementById('goalInput');
+  const setGoalBtn = document.getElementById('setGoal');
+  const progress = document.getElementById('progress');
+  const goalText = document.getElementById('goalText');
+  const addBy = document.getElementById('addBy');
+  const addBtn = document.getElementById('addBtn');
+  const historyEl = document.getElementById('history');
+  const exportBtn = document.getElementById('export');
+  const clearHistoryBtn = document.getElementById('clearHistory');
+  const undoBtn = document.getElementById('undo');
+  const tapBtn = document.getElementById('tap');
+  const perRoundInput = document.getElementById('perRound');
+  const roundsCompletedEl = document.getElementById('roundsCompleted');
+  const inRoundEl = document.getElementById('inRound');
+  const perRoundDisplay = document.getElementById('perRoundDisplay');
+  const toggleAutoRoundBtn = document.getElementById('toggleAutoRound');
+  const soundToggle = document.getElementById('soundToggle');
+  const keepScreen = document.getElementById('keepScreen');
+  const sessionTimerEl = document.getElementById('sessionTimer');
 
-    let state = {
-      count: 0,
-      goal: null,
-      history: [], // {t, delta, count, note?}
-      undoStack: [],
-      sessionStart: Date.now(),
-      soundOn: true
-    };
+  // State
+  const STORAGE_KEY = 'chant_counter_v2';
+  let state = {
+    totalCount: 0,       // cumulative
+    inRoundCount: 0,     // count within current round (0 .. perRound-1)
+    perRound: 108,
+    roundsCompleted: 0,
+    goal: null,
+    history: [],         // {t, delta, totalCount, inRound}
+    lastAction: null,
+    autoRound: true,
+    sessionStart: Date.now()
+  };
 
-    const STORAGE_KEY = 'chant_counter_v3';
+  // WebAudio "Om-like" generator
+  const AudioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+  function playOm(){
+    if(!AudioCtx) return;
+    // create a warm harmonic Om-ish tone: low fundamental + gentle harmonic + vowel-ish envelope
+    const now = AudioCtx.currentTime;
+    const base = AudioCtx.createOscillator();
+    const harm = AudioCtx.createOscillator();
+    const gain = AudioCtx.createGain();
+    const gain2 = AudioCtx.createGain();
 
-    /* ================== Audio & Vibration ================== */
-    const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
-    function beepQuick(){
-      if(!audioCtx || !state.soundOn) return;
-      try{
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.type = 'sine';
-        o.frequency.value = 880;
-        g.gain.value = 0.12;
-        o.connect(g); g.connect(audioCtx.destination);
-        o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
-        o.stop(audioCtx.currentTime + 0.14);
-      }catch(e){}
+    base.type = 'sine'; base.frequency.value = 110; // low
+    harm.type = 'sine'; harm.frequency.value = 220; // octave
+
+    gain.gain.value = 0.0001;
+    gain2.gain.value = 0.0001;
+
+    base.connect(gain);
+    harm.connect(gain2);
+    gain.connect(AudioCtx.destination);
+    gain2.connect(AudioCtx.destination);
+
+    // Envelope: quick attack, slow decay
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+
+    gain2.gain.setValueAtTime(0.0001, now);
+    gain2.gain.exponentialRampToValueAtTime(0.09, now + 0.03);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
+
+    base.start(now);
+    harm.start(now);
+    base.stop(now + 0.9);
+    harm.stop(now + 0.9);
+  }
+
+  // save/load
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function load(){
+    try{
+      const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if(s) state = {...state, ...s};
+    }catch(e){}
+  }
+
+  // UI render
+  function render(){
+    countEl.textContent = state.totalCount;
+    inRoundEl.textContent = state.inRoundCount;
+    perRoundDisplay.textContent = state.perRound;
+    roundsCompletedEl.textContent = state.roundsCompleted;
+    goalText.textContent = state.goal ? `Goal: ${state.goal} · ${state.totalCount}/${state.goal} (${Math.min(100, Math.round((state.totalCount/state.goal)*100))}%)` : 'Goal: —';
+    const prog = state.goal ? Math.min(100, Math.round((state.totalCount/state.goal)*100)) : Math.min(100, Math.floor((state.inRoundCount/state.perRound)*100));
+    progress.value = prog;
+    toggleAutoRoundBtn.textContent = `Auto-round: ${state.autoRound ? 'On' : 'Off'}`;
+    renderHistory();
+    save();
+  }
+
+  function renderHistory(){
+    historyEl.innerHTML = '';
+    if(state.history.length===0){
+      historyEl.innerHTML = '<div class="small muted">No history yet</div>';
+      return;
     }
-    function vibrate(ms=20){ if(navigator.vibrate) navigator.vibrate(ms); }
+    state.history.slice().reverse().forEach(it=>{
+      const d = new Date(it.t);
+      const row = document.createElement('div');
+      row.className = 'hist-item';
+      row.innerHTML = `<div style="color:#111">${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`;
+      historyEl.appendChild(row);
+    });
+  }
 
-    /* ================== Persistence ================== */
-    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-    function load(){
-      try{
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if(!raw) return;
-        const s = JSON.parse(raw);
-        state = {...state, ...s};
-        state.history = state.history || [];
-        state.undoStack = state.undoStack || [];
-      }catch(e){ console.warn('Load failed', e); }
-    }
+  // core change handler
+  function change(delta, record=true){
+    state.totalCount += delta;
+    if(state.totalCount < 0) state.totalCount = 0;
 
-    /* ================== Render ================== */
-    function render(){
-      countEl.textContent = state.count;
-      if(state.goal && state.goal > 0){
-        const percent = Math.min(100, Math.round((state.count / state.goal) * 100));
-        progress.value = percent;
-        progress.classList.toggle('success', state.count >= state.goal);
-        progressText.textContent = `Goal: ${state.goal} · ${state.count}/${state.goal} (${percent}%)`;
-      } else {
-        progress.value = 0;
-        progress.classList.remove('success');
-        progressText.textContent = `Goal: —`;
+    // update in-round depending on mode:
+    if(state.autoRound){
+      state.inRoundCount += delta;
+      // handle negative
+      if(state.inRoundCount < 0){
+        // borrow from roundsCompleted if available
+        if(state.roundsCompleted > 0){
+          state.roundsCompleted = Math.max(0, state.roundsCompleted - 1);
+          state.inRoundCount = state.perRound + state.inRoundCount; // negative adjustment
+        } else {
+          state.inRoundCount = 0;
+        }
       }
-      renderHistory();
-      sessionsCountEl.textContent = `Entries: ${state.history.length}`;
-      soundToggle.checked = !!state.soundOn;
-      save();
-    }
 
-    function renderHistory(){
-      historyEl.innerHTML = '';
-      if(state.history.length === 0){
-        const empty = document.createElement('div');
-        empty.className = 'small muted-ghost';
-        empty.textContent = 'No history yet';
-        historyEl.appendChild(empty);
-        return;
+      // if inRound reaches perRound or exceeds, carry over multiple rounds
+      while(state.inRoundCount >= state.perRound){
+        state.inRoundCount -= state.perRound;
+        state.roundsCompleted += 1;
       }
-      state.history.slice().reverse().forEach(item => {
-        const d = new Date(item.t);
-        const wrap = document.createElement('div');
-        wrap.className = 'hist-item';
-        const left = document.createElement('div');
-        left.style.color = '#0f172a';
-        left.textContent = `${item.delta>0?'+':''}${item.delta} → ${item.count}`;
-        const right = document.createElement('div');
-        right.className = 'small muted-ghost';
-        right.textContent = d.toLocaleString();
-        wrap.appendChild(left);
-        wrap.appendChild(right);
-        historyEl.appendChild(wrap);
-      });
+    } else {
+      // cumulative mode: compute rounds from totalCount
+      state.inRoundCount = state.totalCount % state.perRound;
+      state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
     }
 
-    /* ================== Core change & goal sound ================== */
-    let goalReachedPlayed = false; // prevents repeated goal sound
-
-    function playGoalSound(){
-      if(!audioCtx || !state.soundOn) return;
-      try{
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.type = 'triangle';
-        o.frequency.setValueAtTime(880, audioCtx.currentTime);
-        o.connect(g); g.connect(audioCtx.destination);
-        g.gain.value = 0.0001;
-        o.start();
-        g.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.02);
-        o.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.12);
-        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.26);
-        o.stop(audioCtx.currentTime + 0.28);
-      }catch(e){ console.warn('goal sound failed', e); }
-    }
-
-    function change(delta, note){
-      state.count += delta;
-      if(state.count < 0) state.count = 0;
-
-      const entry = {t: Date.now(), delta, count: state.count, note: note || ''};
+    if(record){
+      const entry = {t: Date.now(), delta, totalCount: state.totalCount, inRound: state.inRoundCount};
       state.history.push(entry);
-      state.undoStack.push({delta: -delta, t: entry.t});
-
-      // normal feedback
-      beepQuick();
-      vibrate(18);
-
-      // check goal - play goal sound once when reaching / exceeding goal
-      if(state.goal && state.goal > 0 && state.count >= state.goal){
-        if(!goalReachedPlayed){
-          playGoalSound();
-          goalReachedPlayed = true;
-        }
-      } else {
-        goalReachedPlayed = false;
-      }
-
-      render();
+      state.lastAction = entry;
     }
 
-    function undo(){
-      if(state.undoStack.length === 0) return;
-      const u = state.undoStack.pop();
-      state.count += u.delta;
-      if(state.count < 0) state.count = 0;
-      for(let i = state.history.length - 1; i >= 0; i--){
-        if(state.history[i].t === u.t){
-          state.history.splice(i, 1);
-          break;
-        }
-      }
-      render();
+    // feedback
+    if(soundToggle.checked) {
+      // resume audio context if suspended
+      if(AudioCtx && AudioCtx.state === 'suspended') { AudioCtx.resume(); }
+      playOm();
     }
-
-    /* ================== Buttons & bindings ================== */
-    incBtn.addEventListener('click', ()=> change(1));
-    decBtn.addEventListener('click', ()=> change(-1));
-    resetBtn.addEventListener('click', ()=> {
-      if(!confirm('Reset count to 0?')) return;
-      const prev = state.count;
-      state.count = 0;
-      state.history.push({t:Date.now(), delta: -prev, count: 0, note:'reset'});
-      state.undoStack.push({delta: prev, t: Date.now()});
-      render();
-    });
-
-    setGoalBtn.addEventListener('click', ()=>{
-      const g = parseInt(goalInput.value);
-      if(!g || isNaN(g) || g <= 0){ state.goal = null; goalInput.value = ''; alert('Enter a goal > 0 or clear to remove'); render(); return; }
-      state.goal = g;
-      // reset goal sound flag if starting a new goal
-      goalReachedPlayed = (state.count >= state.goal);
-      render();
-    });
-
-    addBtn.addEventListener('click', ()=>{
-      const n = parseInt(addBy.value);
-      if(!n || isNaN(n)) return;
-      change(n);
-      addBy.value = '';
-    });
-
-    exportBtn.addEventListener('click', ()=>{
-      if(state.history.length === 0){ alert('No history to export'); return; }
-      let csv = 'timestamp,delta,count,note\n';
-      state.history.forEach(it => {
-        csv += `"${new Date(it.t).toISOString()}",${it.delta},${it.count},"${(it.note||'').replace(/"/g,'""')}"\n`;
-      });
-      const blob = new Blob([csv], {type:'text/csv'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'chant_history.csv'; document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-    });
-
-    clearHistoryBtn.addEventListener('click', ()=>{
-      if(!confirm('Clear history? This cannot be undone.')) return;
-      state.history = [];
-      state.undoStack = [];
-      render();
-    });
-
-    undoBtn.addEventListener('click', undo);
-
-    soundToggle.addEventListener('change', ()=> { state.soundOn = !!soundToggle.checked; save(); });
-
-    /* ================== Keyboard support ================== */
-    window.addEventListener('keydown', (e) => {
-      const inInput = ['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
-      if(inInput) return;
-      if(e.code === 'Space'){
-        e.preventDefault();
-        change(1);
-      } else if(e.code === 'Backspace'){
-        e.preventDefault();
-        change(-1);
-      }
-    });
-
-    /* ================== Long-press continuous for inc/dec (kept for small inc/dec buttons) ================== */
-    function attachLongPress(btn, delta){
-      let timer = null, interval = null;
-      const start = (e) => {
-        e.preventDefault();
-        change(delta);
-        timer = setTimeout(()=> {
-          interval = setInterval(()=> change(delta), 110);
-        }, 350);
-      };
-      const stop = () => {
-        if(timer) clearTimeout(timer);
-        if(interval) { clearInterval(interval); interval = null; }
-      };
-      btn.addEventListener('pointerdown', start);
-      btn.addEventListener('pointerup', stop);
-      btn.addEventListener('pointerleave', stop);
-      btn.addEventListener('pointercancel', stop);
-    }
-    attachLongPress(incBtn, 1);
-    attachLongPress(decBtn, -1);
-
-    /* ================== BIG TAP (single tap only) ================== */
-    (function(){
-      if(!bigTap) return;
-      document.body.classList.add('body-bottom-padding');
-
-      bigTap.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        change(1); // single +1 per tap only
-      }, {passive:false});
-
-      // accessibility: keyboard trigger
-      bigTap.addEventListener('keydown', (e) => {
-        if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); change(1); }
-      });
-    })();
-
-    /* ================== Session timer ================== */
-    function tickSession(){
-      const diff = Date.now() - state.sessionStart;
-      const s = Math.floor(diff/1000)%60;
-      const m = Math.floor(diff/60000)%60;
-      const h = Math.floor(diff/3600000);
-      sessionTimerEl.textContent = `Session: ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }
-    setInterval(tickSession, 1000);
-
-    /* ================== Wake Lock (Keep screen on) ================== */
-    let wakeLock = null;
-    async function requestWakeLock(){
-      if(!('wakeLock' in navigator)){
-        alert('Wake Lock not supported in this browser. Try modern Safari on iOS or Chrome on Android.');
-        return;
-      }
-      try{
-        wakeLock = await navigator.wakeLock.request('screen');
-        wakeBtn.textContent = 'Screen on ✓';
-        wakeLock.addEventListener('release', () => {
-          wakeBtn.textContent = 'Keep screen on';
-        });
-      }catch(err){
-        console.warn('Wake Lock error', err);
-        alert('Unable to acquire wake lock: ' + (err && err.message ? err.message : err));
-      }
-    }
-    wakeBtn.addEventListener('click', ()=> requestWakeLock());
-
-    /* ================== Media Session / Volume best-effort (no lock-screen) ================== */
-    (function(){
-      window.addEventListener('keydown', (ev) => {
-        const code = ev.code || '';
-        const key = ev.key || '';
-        const keyCode = ev.keyCode || 0;
-        if(code === 'AudioVolumeUp' || key === 'VolumeUp' || keyCode === 175){
-          ev.preventDefault();
-          change(1);
-        }
-        if(code === 'AudioVolumeDown' || key === 'VolumeDown' || keyCode === 174){
-          ev.preventDefault();
-          change(-1);
-        }
-      }, {passive:false});
-
-      if('mediaSession' in navigator){
-        try {
-          navigator.mediaSession.setActionHandler('play', function() { change(1); });
-          navigator.mediaSession.setActionHandler('pause', function() { /* optional */ });
-        } catch(e) { console.warn('mediaSession handler failed', e); }
-      }
-    })();
-
-    /* ================== Friendly audio resume ================== */
-    function resumeAudioOnFirstGesture(){
-      function resume(){
-        if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-        window.removeEventListener('click', resume);
-        window.removeEventListener('touchstart', resume);
-        window.removeEventListener('keydown', resume);
-      }
-      window.addEventListener('click', resume);
-      window.addEventListener('touchstart', resume);
-      window.addEventListener('keydown', resume);
-    }
-    resumeAudioOnFirstGesture();
-
-    /* ================== Load / start ================== */
-    load();
-    if(!state.sessionStart) state.sessionStart = Date.now();
-    if(typeof state.soundOn === 'undefined') state.soundOn = true;
+    // vibrate if available
+    if(navigator.vibrate) navigator.vibrate(20);
     render();
-    incBtn.focus();
-  </script>
+  }
+
+  function undo(){
+    if(!state.lastAction) return;
+    // remove last matching entry (by timestamp)
+    for(let i=state.history.length-1;i>=0;i--){
+      if(state.history[i].t === state.lastAction.t){
+        state.history.splice(i,1);
+        break;
+      }
+    }
+    // restore from remaining last entry or recalc
+    const last = state.history[state.history.length-1];
+    if(last){
+      state.totalCount = last.totalCount;
+      state.inRoundCount = last.inRound;
+      if(!state.autoRound){
+        state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
+      } else {
+        // keep roundsCompleted as stored previously by recomputing from history
+        let rounds = 0, inR = 0;
+        // recompute from scratch
+        let tot = 0;
+        for(const h of state.history){
+          tot = h.totalCount;
+        }
+        state.totalCount = tot;
+        state.inRoundCount = state.autoRound ? (state.inRoundCount % state.perRound) : state.totalCount % state.perRound;
+        if(!state.autoRound) state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
+      }
+    } else {
+      // no history left
+      state.totalCount = 0;
+      state.inRoundCount = 0;
+      state.roundsCompleted = 0;
+    }
+    state.lastAction = null;
+    render();
+  }
+
+  // Buttons
+  incBtn.addEventListener('click', ()=> change(1));
+  decBtn.addEventListener('click', ()=> change(-1));
+  resetBtn.addEventListener('click', ()=>{
+    if(!confirm('Reset total and in-round counts?')) return;
+    state.totalCount = 0; state.inRoundCount = 0; state.roundsCompleted = 0;
+    state.history.push({t:Date.now(), delta:0, totalCount:0, inRound:0, note:'reset'});
+    render();
+  });
+
+  setGoalBtn.addEventListener('click', ()=>{
+    const g = parseInt(goalInput.value);
+    if(!g || g<=0){ state.goal = null; alert('Enter a valid goal > 0 or clear to remove'); return; }
+    state.goal = g;
+    render();
+  });
+
+  addBtn.addEventListener('click', ()=>{
+    const n = parseInt(addBy.value);
+    if(isNaN(n) || n===0) return;
+    change(n);
+    addBy.value = '';
+  });
+
+  exportBtn.addEventListener('click', ()=>{
+    if(state.history.length===0){ alert('No history to export'); return; }
+    let csv = 'timestamp,delta,totalCount,inRound\\n';
+    state.history.forEach(it => {
+      csv += `"${new Date(it.t).toISOString()}",${it.delta},${it.totalCount},${it.inRound}\\n`;
+    });
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'chant_history.csv'; document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  clearHistoryBtn.addEventListener('click', ()=>{
+    if(!confirm('Clear history?')) return;
+    state.history = [];
+    render();
+  });
+
+  undoBtn.addEventListener('click', undo);
+
+  // keyboard shortcuts
+  window.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space'){ e.preventDefault(); change(1); }
+    if(e.code === 'Backspace'){ e.preventDefault(); change(-1); }
+  });
+
+  // long-press / continuous support for tap & inc/dec
+  function attachLongPress(el, delta){
+    let timer=null, interval=null;
+    const start = (ev) => {
+      ev.preventDefault();
+      // first immediate change
+      change(delta);
+      timer = setTimeout(()=> {
+        interval = setInterval(()=> change(delta), 120);
+      }, 350);
+    };
+    const stop = () => {
+      if(timer) clearTimeout(timer);
+      if(interval) { clearInterval(interval); interval=null; }
+    };
+    el.addEventListener('pointerdown', start);
+    window.addEventListener('pointerup', stop);
+    el.addEventListener('pointerleave', stop);
+    el.addEventListener('pointercancel', stop);
+  }
+  attachLongPress(incBtn, 1);
+  attachLongPress(decBtn, -1);
+  attachLongPress(tapBtn, 1);
+
+  // tap button also responds to click/tap
+  tapBtn.addEventListener('click', ()=> change(1));
+
+  // per-round input / toggle behavior
+  perRoundInput.addEventListener('change', ()=>{
+    const v = parseInt(perRoundInput.value);
+    if(v && v>0){
+      state.perRound = v;
+      // recompute inRound and rounds depending on mode
+      if(!state.autoRound){
+        state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
+        state.inRoundCount = state.totalCount % state.perRound;
+      } else {
+        // when switching size keep present inRound as modulo
+        state.inRoundCount = state.totalCount % state.perRound;
+      }
+      render();
+    }
+  });
+
+  toggleAutoRoundBtn.addEventListener('click', ()=>{
+    state.autoRound = !state.autoRound;
+    // recompute counters to reflect mode
+    if(state.autoRound){
+      // convert cumulative to auto style: keep roundsCompleted as is and inRound from totalCount
+      const total = state.totalCount;
+      state.roundsCompleted = Math.floor(total / state.perRound);
+      state.inRoundCount = total % state.perRound;
+    } else {
+      // cumulative mode: ensure rounds = floor(total/perRound)
+      state.inRoundCount = state.totalCount % state.perRound;
+      state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
+    }
+    render();
+  });
+
+  // Keep screen on (simple approach using Wake Lock API)
+  let wakeLock = null;
+  keepScreen.addEventListener('change', async ()=>{
+    if(keepScreen.checked){
+      try{
+        if('wakeLock' in navigator){
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', ()=> { keepScreen.checked = false; });
+        } else {
+          // fallback: do nothing, browser may not support
+          console.log('Wake Lock not supported in this browser');
+        }
+      }catch(e){
+        console.log('Wake Lock request failed', e);
+      }
+    } else {
+      if(wakeLock){ wakeLock.release(); wakeLock = null; }
+    }
+  });
+
+  // Session timer
+  function tickSession(){
+    const diff = Date.now() - state.sessionStart;
+    const s = Math.floor(diff/1000)%60;
+    const m = Math.floor(diff/60000)%60;
+    const h = Math.floor(diff/3600000);
+    sessionTimerEl.textContent = `Session: ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+  setInterval(tickSession, 1000);
+
+  // Init
+  load();
+  if(!state.sessionStart) state.sessionStart = Date.now();
+  // ensure defaults shown
+  perRoundInput.value = state.perRound;
+  render();
+
+  // Autoresume audio context on first user gesture
+  ['click','touchstart','keydown'].forEach(evt=>{
+    window.addEventListener(evt, function resume(){
+      if(AudioCtx && AudioCtx.state === 'suspended') AudioCtx.resume();
+      window.removeEventListener(evt, resume);
+    });
+  });
+
+  // Focus friendly
+  incBtn.focus();
+</script>
 </body>
 </html>
