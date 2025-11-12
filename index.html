@@ -1,14 +1,28 @@
-\<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Chanting Counter — PWA + Haptics + Round Animation</title>
-  <!-- Link to manifest (add file below) -->
+  <title>Chanting Counter — PWA + Haptics</title>
+
+  <!-- PWA manifest -->
   <link rel="manifest" href="/manifest.json" />
+
+  <!-- Preferred PNG icons (recommended) -->
+  <link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="shortcut icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/icons/icon-512.png" sizes="512x512">
+
+  <!-- Fallbacks: if PNGs not present, some browsers may use SVG -->
+  <link rel="mask-icon" href="/icons/icon-192.svg" color="#ff4fa1">
+
   <meta name="theme-color" content="#0b0b0d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
   <style>
-    /* Basic theme + dark support */
+    /* (Same CSS from the working app; trimmed slightly) */
     :root{
       --bg:#fff7fb; --card:#fff; --accent:#ff4fa1; --muted:#6b6f76; --text:#0f172a; --tap-text:#111; --progress-fill:#2f9a3f;
     }
@@ -18,12 +32,9 @@
         --accent:#ff6fb0; --muted:#9aa0a6; --text:#e8e8ec; --tap-text:#fff; --progress-fill:#36b37e;
       }
     }
-
     *{box-sizing:border-box}
-    html,body{height:100%; margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:var(--text)}
+    html,body{height:100%; margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:var(--bg); color:var(--text)}
     .wrap{max-width:920px; margin:18px auto; padding:18px;}
-    header{display:flex; align-items:center; gap:12px; margin-bottom:10px}
-    header h1{font-size:20px; margin:0}
     .card{background:var(--card); border-radius:14px; padding:18px; box-shadow:0 12px 36px rgba(0,0,0,0.06)}
     .count-big{font-size:64px; font-weight:700; text-align:center}
     .small{font-size:13px; color:var(--muted)}
@@ -33,15 +44,11 @@
     input[type="number"], input[type="text"]{padding:12px;border-radius:16px;border:1px solid #eee;min-width:120px;background:transparent;color:var(--text);font-size:16px}
     progress{width:100%;height:14px;border-radius:8px;overflow:hidden}
     .history{margin-top:14px; max-height:220px; overflow:auto; border-radius:8px; padding:8px; background: rgba(0,0,0,0.03)}
-    .hist-item{font-size:13px; padding:8px; border-radius:8px; display:flex; justify-content:space-between; gap:12px}
-    /* Big translucent tap button (widened) */
     .tap-wrap{position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:80; width:96%; max-width:1000px; pointer-events:none}
     .tap-btn{pointer-events:auto; width:100%; border-radius:48px; padding:30px 22px; text-align:center; backdrop-filter: blur(8px); background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,79,161,0.06)); border:1px solid rgba(255,79,161,0.12); box-shadow:0 16px 50px rgba(255,79,161,0.12); display:flex; justify-content:space-between; align-items:center; gap:18px; font-weight:900; color:var(--tap-text) }
     .tap-count{font-size:44px}
     .tap-note{font-size:14px; opacity:0.95}
-    @media (max-width:560px){ .count-big{font-size:46px} .tap-btn{padding:24px} .tap-count{font-size:40px} }
     .pill{padding:10px 14px; border-radius:28px; background:var(--card); border:1px solid rgba(0,0,0,0.04); font-weight:700}
-    /* Round overlay */
     #roundOverlay{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1200; display:none; max-width:760px; width:84%; pointer-events:none; border-radius:20px; padding:22px; text-align:center; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); box-shadow: 0 16px 60px rgba(255,100,150,0.12); }
     @media (prefers-color-scheme: dark){ #roundOverlay{background: linear-gradient(180deg, rgba(20,18,20,0.92), rgba(30,26,30,0.86)); color: var(--text);} }
     @media (prefers-color-scheme: light){ #roundOverlay{background: linear-gradient(180deg, rgba(255,245,250,0.98), rgba(255,235,245,0.95)); color: #2b0720;} }
@@ -61,7 +68,6 @@
         <div id="goalText" class="small">Goal: —</div>
       </div>
 
-      <!-- top actions -->
       <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <button id="dec" class="secondary" aria-label="Decrease">−1</button>
@@ -75,7 +81,6 @@
         </div>
       </div>
 
-      <!-- per-round & clear -->
       <div style="display:flex; justify-content:space-between; margin-top:12px; gap:12px; align-items:center;">
         <div style="display:flex; gap:8px; align-items:center;">
           <input id="perRound" type="number" min="1" placeholder="Per round (e.g., 108)" aria-label="Per round" style="width:150px"/>
@@ -114,10 +119,8 @@
     </main>
   </div>
 
-  <!-- round overlay (created hidden, controlled by JS) -->
   <div id="roundOverlay" aria-hidden="true"></div>
 
-  <!-- big translucent tap button -->
   <div class="tap-wrap">
     <div id="tap" class="tap-btn" role="button" aria-label="+1 (tap)">
       <div style="display:flex; gap:12px; align-items:center;">
@@ -131,329 +134,195 @@
     </div>
   </div>
 
-  <script>
-  /***** Chanting Counter App v-ready *****
-   * Features:
-   * - persisted state (localStorage)
-   * - editable per-round
-   * - Om sound (WebAudio)
-   * - haptic/vibration with sound fallback
-   * - round-complete visual + chime + vibration pattern
-   * - PWA registration (service-worker registration)
-   *
-   * Put manifest.json and service-worker.js in repo root.
-   * Add icons at /icons/icon-192.svg and /icons/icon-512.svg (or PNG)
-   *****************************************/
+<script>
+/* Full app JS: state, audio, haptics, round animation, PWA registration.
+   This is the same JS used previously with small fallback handling for icon presence.
+*/
 
-  // DOM helpers
-  const $ = id => document.getElementById(id);
+const $ = id => document.getElementById(id);
 
-  // elements
-  const countEl = $('count'), inRoundEl = $('inRound'), roundsEl = $('roundsCompleted'),
-        perRoundInput = $('perRound'), perRoundDisplay = $('perRoundDisplay'),
-        goalText = $('goalText'), historyEl = $('history'), progressEl = $('progress'),
-        tapBtn = $('tap'), incBtn = $('inc'), decBtn = $('dec'), resetBtn = $('reset'),
-        addBy = $('addBy'), addBtn = $('addBtn'), undoBtn = $('undo'),
-        setGoalBtn = $('setGoal'), goalInput = $('goalInput'), toggleAutoRoundBtn = $('toggleAutoRound'),
-        clearHistoryTop = $('clearHistoryTop'), soundToggle = $('soundToggle'), hapticToggle = $('hapticToggle'),
-        vibeNotice = $('vibeNotice'), roundOverlay = $('roundOverlay');
+// DOM refs
+const countEl = $('count'), inRoundEl = $('inRound'), roundsEl = $('roundsCompleted'),
+      perRoundInput = $('perRound'), perRoundDisplay = $('perRoundDisplay'),
+      goalText = $('goalText'), historyEl = $('history'), progressEl = $('progress'),
+      tapBtn = $('tap'), incBtn = $('inc'), decBtn = $('dec'), resetBtn = $('reset'),
+      addBy = $('addBy'), addBtn = $('addBtn'), undoBtn = $('undo'),
+      setGoalBtn = $('setGoal'), goalInput = $('goalInput'), toggleAutoRoundBtn = $('toggleAutoRound'),
+      clearHistoryTop = $('clearHistoryTop'), soundToggle = $('soundToggle'), hapticToggle = $('hapticToggle'),
+      vibeNotice = $('vibeNotice'), roundOverlay = $('roundOverlay');
 
-  // storage key & initial state
-  const STORAGE_KEY = 'chant_counter_full_v1';
-  const defaultState = {
-    totalCount: 0,
-    inRound: 0,
-    perRound: 108,
-    roundsCompleted: 0,
-    goal: null,
-    history: [],
-    lastAction: null,
-    autoRound: true,
-    sound: true,
-    haptic: true,
-    sessionStart: Date.now()
-  };
-  let state = {...defaultState};
+const STORAGE_KEY = 'chant_counter_pwa_latest_v1';
+const defaultState = {
+  totalCount:0, inRound:0, perRound:108, roundsCompleted:0, goal:null,
+  history:[], lastAction:null, autoRound:true, sound:true, haptic:true, sessionStart:Date.now()
+};
+let state = {...defaultState};
 
-  // WebAudio
-  const AudioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+// Audio
+const AudioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+function playOm(){ if(!AudioCtx) return; const now=AudioCtx.currentTime; const o1=AudioCtx.createOscillator(), o2=AudioCtx.createOscillator(); const g1=AudioCtx.createGain(), g2=AudioCtx.createGain(); o1.type='sine'; o1.frequency.value=110; o2.type='sine'; o2.frequency.value=220; o1.connect(g1); o2.connect(g2); g1.connect(AudioCtx.destination); g2.connect(AudioCtx.destination); g1.gain.setValueAtTime(0.0001, now); g1.gain.exponentialRampToValueAtTime(0.22, now+0.02); g1.gain.exponentialRampToValueAtTime(0.0001, now+0.85); g2.gain.setValueAtTime(0.0001, now); g2.gain.exponentialRampToValueAtTime(0.09, now+0.03); g2.gain.exponentialRampToValueAtTime(0.0001, now+0.85); o1.start(now); o2.start(now); o1.stop(now+0.85); o2.stop(now+0.85); }
 
-  function playOm(){
-    if(!AudioCtx) return;
-    const now = AudioCtx.currentTime;
-    const o1 = AudioCtx.createOscillator(), o2 = AudioCtx.createOscillator();
-    const g1 = AudioCtx.createGain(), g2 = AudioCtx.createGain();
-    o1.type = 'sine'; o1.frequency.value = 110;
-    o2.type = 'sine'; o2.frequency.value = 220;
-    o1.connect(g1); o2.connect(g2); g1.connect(AudioCtx.destination); g2.connect(AudioCtx.destination);
-    g1.gain.setValueAtTime(0.0001, now); g1.gain.exponentialRampToValueAtTime(0.22, now+0.02); g1.gain.exponentialRampToValueAtTime(0.0001, now+0.85);
-    g2.gain.setValueAtTime(0.0001, now); g2.gain.exponentialRampToValueAtTime(0.09, now+0.03); g2.gain.exponentialRampToValueAtTime(0.0001, now+0.85);
-    o1.start(now); o2.start(now); o1.stop(now+0.85); o2.stop(now+0.85);
-  }
+function playRoundChime(){ if(!AudioCtx) return; const now=AudioCtx.currentTime; const osc=AudioCtx.createOscillator(); const gain=AudioCtx.createGain(); osc.type='triangle'; osc.frequency.setValueAtTime(660, now); osc.frequency.exponentialRampToValueAtTime(220, now+0.7); gain.gain.setValueAtTime(0.0001, now); gain.gain.exponentialRampToValueAtTime(0.35, now+0.02); gain.gain.exponentialRampToValueAtTime(0.0001, now+1.0); osc.connect(gain); gain.connect(AudioCtx.destination); osc.start(now); osc.stop(now+1.05); const h=AudioCtx.createOscillator(); const gh=AudioCtx.createGain(); h.type='sine'; h.frequency.setValueAtTime(880, now); gh.gain.setValueAtTime(0.0001, now); gh.gain.exponentialRampToValueAtTime(0.12, now+0.03); gh.gain.exponentialRampToValueAtTime(0.0001, now+0.95); h.connect(gh); gh.connect(AudioCtx.destination); h.start(now); h.stop(now+0.95); }
 
-  // Round chime (bell)
-  function playRoundChime(){
-    if(!AudioCtx) return;
-    const now = AudioCtx.currentTime;
-    const osc = AudioCtx.createOscillator();
-    const gain = AudioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(660, now);
-    osc.frequency.exponentialRampToValueAtTime(220, now + 0.7);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);
-    osc.connect(gain); gain.connect(AudioCtx.destination);
-    osc.start(now); osc.stop(now + 1.05);
+// Persistence
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function load(){ try{ const s=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(s) state = {...defaultState, ...s}; }catch(e){} }
 
-    const h = AudioCtx.createOscillator();
-    const gh = AudioCtx.createGain();
-    h.type = 'sine'; h.frequency.setValueAtTime(880, now);
-    gh.gain.setValueAtTime(0.0001, now);
-    gh.gain.exponentialRampToValueAtTime(0.12, now + 0.03);
-    gh.gain.exponentialRampToValueAtTime(0.0001, now + 0.95);
-    h.connect(gh); gh.connect(AudioCtx.destination);
-    h.start(now); h.stop(now + 0.95);
-  }
-
-  // Persistence
-  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-  function load(){
-    try{
-      const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if(s) state = {...defaultState, ...s};
-    }catch(e){}
-  }
-
-  // UI render
-  function render(){
-    countEl.textContent = state.totalCount;
-    inRoundEl.textContent = state.inRound;
-    perRoundDisplay.textContent = state.perRound;
-    roundsEl.textContent = state.roundsCompleted;
-    progressEl.value = state.goal ? Math.min(100, Math.round((state.totalCount/state.goal)*100)) : Math.min(100, Math.floor((state.inRound/state.perRound)*100));
-    goalText.textContent = state.goal ? `Goal: ${state.goal} · ${state.totalCount}/${state.goal} (${Math.min(100, Math.round((state.totalCount/state.goal)*100))}%)` : 'Goal: —';
-    toggleAutoRoundBtn.textContent = `Auto-round: ${state.autoRound ? 'On' : 'Off'}`;
-    soundToggle.checked = state.sound; hapticToggle.checked = state.haptic;
-    perRoundInput.value = state.perRound;
-    renderHistory();
-    updateVibeNotice();
-    save();
-  }
-
-  function renderHistory(){
-    historyEl.innerHTML = '';
-    if(state.history.length === 0){ historyEl.innerHTML = '<div class="small">No history yet</div>'; return; }
-    state.history.slice().reverse().forEach(it=>{
-      const d = new Date(it.t);
-      const div = document.createElement('div'); div.className = 'hist-item';
-      div.style.display = 'flex'; div.style.justifyContent = 'space-between';
-      div.innerHTML = `<div style="color:var(--text)">${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`;
-      historyEl.appendChild(div);
-    });
-  }
-
-  // vibration support
-  const vibrationSupported = 'vibrate' in navigator;
-  function updateVibeNotice(){
-    if(!vibrationSupported){
-      vibeNotice.textContent = 'Note: Vibration is not supported in this browser (iOS Safari usually lacks it). Sound fallback will be used.';
-    } else {
-      vibeNotice.textContent = '';
-    }
-  }
-
-  // confetti DOM burst
-  function createConfettiBurst(n){
-    for(let i=0;i<n;i++){
-      const p = document.createElement('div');
-      p.style.position = 'fixed';
-      p.style.left = (50 + (Math.random()*60 - 30)) + '%';
-      p.style.top = (50 + (Math.random()*10 - 5)) + '%';
-      p.style.width = p.style.height = (6 + Math.random()*8) + 'px';
-      p.style.background = ['#ffd6e8','#ff9acb','#ffbfdc','#ffc1e3'][Math.floor(Math.random()*4)];
-      p.style.borderRadius = '3px';
-      p.style.zIndex = 1210;
-      p.style.opacity = '1';
-      document.body.appendChild(p);
-      const dx = (Math.random()*160 - 80);
-      const dy = -80 - Math.random()*160;
-      p.animate([
-        { transform: 'translate(0,0) rotate(0deg)', opacity:1 },
-        { transform: `translate(${dx}px, ${dy}px) rotate(${Math.random()*360}deg)`, opacity:0 }
-      ], { duration: 1000 + Math.random()*400, easing: 'cubic-bezier(.2,.8,.2,1)'});
-      setTimeout(()=> p.remove(), 1400);
-    }
-  }
-
-  // round overlay create (once)
-  (function createRoundOverlay(){
-    roundOverlay.innerHTML = `<div style="font-size:20px; font-weight:800; margin-bottom:6px;">Round complete</div>
-                              <div style="font-size:42px; font-weight:900">ॐ · <span id="roundPlus">+0</span></div>`;
-    roundOverlay.style.display = 'none';
-  })();
-
-  function showRoundCompleteAnimation(){
-    const plusEl = document.getElementById('roundPlus');
-    if(plusEl) plusEl.textContent = `+${state.perRound}`;
-    roundOverlay.style.display = 'block';
-    roundOverlay.style.opacity = '0';
-    roundOverlay.style.transform = 'translate(-50%,-50%) scale(0.92)';
-    roundOverlay.animate([
-      { opacity: 0, transform: 'translate(-50%,-50%) scale(0.92)' },
-      { opacity: 1, transform: 'translate(-50%,-50%) scale(1.04)' },
-      { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }
-    ], { duration: 420, easing: 'cubic-bezier(.2,.9,.3,1)'});
-    createConfettiBurst(12);
-    setTimeout(()=> {
-      roundOverlay.animate([{ opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%,-50%) scale(0.94)' }], { duration: 420, easing: 'ease' });
-      setTimeout(()=> roundOverlay.style.display = 'none', 460);
-    }, 1200);
-  }
-
-  function handleRoundComplete(){
-    // attempt haptic pattern first
-    if(state.haptic && vibrationSupported){
-      try{ navigator.vibrate([60,40,60]); } catch(e) { /* ignore */ }
-    } else {
-      // fallback to chime
-      if(state.sound && AudioCtx){ if(AudioCtx.state === 'suspended') AudioCtx.resume(); playRoundChime(); }
-    }
-    // visual + sound chime always (if audio allowed)
-    showRoundCompleteAnimation();
-    if(state.sound && AudioCtx){ if(AudioCtx.state === 'suspended') AudioCtx.resume(); playRoundChime(); }
-  }
-
-  // core change (apply delta), returns true if roundsCompleted increased
-  function applyDelta(delta, record=true){
-    const prevRounds = state.roundsCompleted;
-    state.totalCount = (state.totalCount || 0) + delta;
-    if(state.totalCount < 0) state.totalCount = 0;
-
-    if(state.autoRound){
-      state.inRound = (state.inRound || 0) + delta;
-      if(state.inRound < 0){
-        if(state.roundsCompleted > 0){
-          state.roundsCompleted = Math.max(0, state.roundsCompleted - 1);
-          state.inRound = state.perRound + state.inRound;
-        } else {
-          state.inRound = 0;
-        }
-      }
-      while(state.inRound >= state.perRound){
-        state.inRound -= state.perRound;
-        state.roundsCompleted += 1;
-      }
-    } else {
-      state.inRound = state.totalCount % state.perRound;
-      state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
-    }
-
-    if(record){
-      const entry = { t: Date.now(), delta, totalCount: state.totalCount, inRound: state.inRound };
-      state.history.push(entry);
-      state.lastAction = entry;
-    }
-
-    // feedback: haptic or sound fallback
-    if(state.haptic && vibrationSupported){
-      try{ navigator.vibrate(30); } catch(e){ if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playOm(); } }
-    } else {
-      if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playOm(); }
-    }
-
-    // detect new rounds
-    const newRound = state.roundsCompleted > prevRounds;
-    render();
-
-    if(newRound) handleRoundComplete();
-
-    return newRound;
-  }
-
-  function undo(){
-    if(!state.lastAction) return;
-    for(let i=state.history.length-1;i>=0;i--){
-      if(state.history[i].t === state.lastAction.t){ state.history.splice(i,1); break; }
-    }
-    const last = state.history[state.history.length-1];
-    if(last){
-      state.totalCount = last.totalCount;
-      state.inRound = last.inRound;
-      state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
-    } else {
-      state.totalCount = 0; state.inRound = 0; state.roundsCompleted = 0;
-    }
-    state.lastAction = null;
-    render();
-  }
-
-  // event wiring
-  incBtn.addEventListener('click', ()=> applyDelta(1));
-  decBtn.addEventListener('click', ()=> applyDelta(-1));
-  resetBtn.addEventListener('click', ()=> { if(confirm('Reset total and in-round counts?')){ state.totalCount=0; state.inRound=0; state.roundsCompleted=0; state.history.push({t:Date.now(), delta:0, totalCount:0, inRound:0, note:'reset'}); render(); }});
-  addBtn.addEventListener('click', ()=> { const n = parseInt(addBy.value); if(!isNaN(n) && n!==0){ applyDelta(n); addBy.value=''; }});
-  undoBtn.addEventListener('click', undo);
-  setGoalBtn.addEventListener('click', ()=> { const g = parseInt(goalInput.value); if(!g || g<=0){ state.goal = null; alert('Enter a valid goal > 0 or clear'); return; } state.goal = g; render();});
-  clearHistoryTop.addEventListener('click', ()=> { if(confirm('Clear history?')){ state.history = []; render(); }});
-  toggleAutoRoundBtn.addEventListener('click', ()=> { state.autoRound = !state.autoRound; if(state.autoRound){ const total = state.totalCount; state.roundsCompleted = Math.floor(total / state.perRound); state.inRound = total % state.perRound; } else { state.inRound = state.totalCount % state.perRound; state.roundsCompleted = Math.floor(state.totalCount/state.perRound); } render();});
-  soundToggle.addEventListener('change', e => { state.sound = e.target.checked; save(); });
-  hapticToggle.addEventListener('change', e => { state.haptic = e.target.checked; save(); });
-
-  // perRound input change handling (fix to be editable)
-  perRoundInput.addEventListener('change', ()=> {
-    const v = parseInt(perRoundInput.value);
-    if(v && v>0){
-      state.perRound = v;
-      if(!state.autoRound){
-        state.roundsCompleted = Math.floor(state.totalCount / state.perRound);
-        state.inRound = state.totalCount % state.perRound;
-      } else {
-        state.inRound = state.totalCount % state.perRound;
-      }
-      render();
-    }
+// UI
+function render(){
+  countEl.textContent = state.totalCount;
+  inRoundEl.textContent = state.inRound;
+  perRoundDisplay.textContent = state.perRound;
+  roundsEl.textContent = state.roundsCompleted;
+  progressEl.value = state.goal ? Math.min(100, Math.round((state.totalCount/state.goal)*100)) : Math.min(100, Math.floor((state.inRound/state.perRound)*100));
+  goalText.textContent = state.goal ? `Goal: ${state.goal} · ${state.totalCount}/${state.goal} (${Math.min(100, Math.round((state.totalCount/state.goal)*100))}%)` : 'Goal: —';
+  toggleAutoRoundBtn.textContent = `Auto-round: ${state.autoRound ? 'On' : 'Off'}`;
+  soundToggle.checked = state.sound; hapticToggle.checked = state.haptic;
+  perRoundInput.value = state.perRound;
+  renderHistory();
+  updateVibeNotice();
+  save();
+}
+function renderHistory(){
+  historyEl.innerHTML = '';
+  if(state.history.length === 0){ historyEl.innerHTML = '<div class="small">No history yet</div>'; return; }
+  state.history.slice().reverse().forEach(it=>{
+    const d = new Date(it.t);
+    const div = document.createElement('div');
+    div.className = 'hist-item';
+    div.style.display = 'flex'; div.style.justifyContent = 'space-between';
+    div.innerHTML = `<div style="color:var(--text)">${it.delta>0?'+':''}${it.delta} → total ${it.totalCount} · in-round ${it.inRound}</div><div class="small">${d.toLocaleString()}</div>`;
+    historyEl.appendChild(div);
   });
+}
 
-  // keyboard shortcuts
-  window.addEventListener('keydown', (e) => {
-    if(e.code === 'Space'){ e.preventDefault(); applyDelta(1); }
-    if(e.code === 'Backspace'){ e.preventDefault(); applyDelta(-1); }
-  });
+// vibefallback
+const vibrationSupported = 'vibrate' in navigator;
+function updateVibeNotice(){
+  if(!vibrationSupported) vibeNotice.textContent = 'Note: Vibration not available in this browser (iOS Safari often blocks it). Sound fallback used.';
+  else vibeNotice.textContent = '';
+}
 
-  // tap button: long-press for continuous
-  let lpTimer = null, lpInterval = null;
-  tapBtn.addEventListener('pointerdown', (ev)=>{
-    ev.preventDefault();
-    applyDelta(1);
-    lpTimer = setTimeout(()=> { lpInterval = setInterval(()=> applyDelta(1), 120); }, 350);
-  });
-  window.addEventListener('pointerup', ()=> { if(lpTimer) clearTimeout(lpTimer); if(lpInterval){ clearInterval(lpInterval); lpInterval = null; } });
+// confetti
+function createConfettiBurst(n){
+  for(let i=0;i<n;i++){
+    const p = document.createElement('div');
+    p.style.position = 'fixed';
+    p.style.left = (50 + (Math.random()*60 - 30)) + '%';
+    p.style.top = (50 + (Math.random()*10 - 5)) + '%';
+    p.style.width = p.style.height = (6 + Math.random()*8) + 'px';
+    p.style.background = ['#ffd6e8','#ff9acb','#ffbfdc','#ffc1e3'][Math.floor(Math.random()*4)];
+    p.style.borderRadius = '3px';
+    p.style.zIndex = 1210;
+    p.style.opacity = '1';
+    document.body.appendChild(p);
+    const dx = (Math.random()*160 - 80);
+    const dy = -80 - Math.random()*160;
+    p.animate([{ transform: 'translate(0,0) rotate(0deg)', opacity:1 }, { transform: `translate(${dx}px, ${dy}px) rotate(${Math.random()*360}deg)`, opacity:0 }], { duration: 1000 + Math.random()*400, easing: 'cubic-bezier(.2,.8,.2,1)'});
+    setTimeout(()=> p.remove(), 1400);
+  }
+}
 
-  // also click
-  tapBtn.addEventListener('click', ()=> applyDelta(1));
+// round overlay
+(function initOverlay(){
+  roundOverlay.innerHTML = `<div style="font-size:20px; font-weight:800; margin-bottom:6px;">Round complete</div><div style="font-size:42px; font-weight:900">ॐ · <span id="roundPlus">+0</span></div>`;
+  roundOverlay.style.display = 'none';
+})();
 
-  // load + init
-  load();
-  if(!state.sessionStart) state.sessionStart = Date.now();
+function showRoundCompleteAnimation(){
+  const plusEl = document.getElementById('roundPlus');
+  if(plusEl) plusEl.textContent = `+${state.perRound}`;
+  roundOverlay.style.display = 'block'; roundOverlay.style.opacity = '0'; roundOverlay.style.transform = 'translate(-50%,-50%) scale(0.92)';
+  roundOverlay.animate([{ opacity:0, transform:'translate(-50%,-50%) scale(0.92)'}, { opacity:1, transform:'translate(-50%,-50%) scale(1.04)'}, { opacity:1, transform:'translate(-50%,-50%) scale(1)' }], { duration:420, easing:'cubic-bezier(.2,.9,.3,1)'});
+  createConfettiBurst(12);
+  setTimeout(()=> { roundOverlay.animate([{ opacity:1, transform:'translate(-50%,-50%) scale(1)' }, { opacity:0, transform:'translate(-50%,-50%) scale(0.94)' }], { duration:420, easing:'ease' }); setTimeout(()=> roundOverlay.style.display='none',460); }, 1200);
+}
+
+function handleRoundComplete(){
+  if(state.haptic && vibrationSupported){
+    try{ navigator.vibrate([60,40,60]); } catch(e) {}
+  } else {
+    if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); }
+  }
+  showRoundCompleteAnimation();
+  if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playRoundChime(); }
+}
+
+// core change
+function applyDelta(delta, record=true){
+  const prevRounds = state.roundsCompleted;
+  state.totalCount = (state.totalCount || 0) + delta;
+  if(state.totalCount < 0) state.totalCount = 0;
+  if(state.autoRound){
+    state.inRound = (state.inRound || 0) + delta;
+    if(state.inRound < 0){
+      if(state.roundsCompleted>0){ state.roundsCompleted = Math.max(0, state.roundsCompleted -1); state.inRound = state.perRound + state.inRound; } else state.inRound = 0;
+    }
+    while(state.inRound >= state.perRound){ state.inRound -= state.perRound; state.roundsCompleted += 1; }
+  } else {
+    state.inRound = state.totalCount % state.perRound;
+    state.roundsCompleted = Math.floor(state.totalCount/state.perRound);
+  }
+  if(record){
+    const entry = { t: Date.now(), delta, totalCount: state.totalCount, inRound: state.inRound };
+    state.history.push(entry); state.lastAction = entry;
+  }
+
+  // feedback
+  if(state.haptic && vibrationSupported){
+    try{ navigator.vibrate(30); } catch(e){ if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playOm(); } }
+  } else {
+    if(state.sound && AudioCtx){ if(AudioCtx.state==='suspended') AudioCtx.resume(); playOm(); }
+  }
+
+  const newRound = state.roundsCompleted > prevRounds;
   render();
+  if(newRound) handleRoundComplete();
+  return newRound;
+}
 
-  // resume audio context on first user gesture
-  ['click','touchstart','keydown'].forEach(evt => {
-    window.addEventListener(evt, function resume(){
-      if(AudioCtx && AudioCtx.state === 'suspended') AudioCtx.resume();
-      window.removeEventListener(evt, resume);
-    });
-  });
+function undo(){
+  if(!state.lastAction) return;
+  for(let i=state.history.length-1;i>=0;i--){ if(state.history[i].t === state.lastAction.t){ state.history.splice(i,1); break; } }
+  const last = state.history[state.history.length-1];
+  if(last){ state.totalCount = last.totalCount; state.inRound = last.inRound; state.roundsCompleted = Math.floor(state.totalCount/state.perRound); } else { state.totalCount=0; state.inRound=0; state.roundsCompleted=0; }
+  state.lastAction = null; render();
+}
 
-  // register service worker (PWA)
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/service-worker.js').then(reg => {
-      console.log('Service worker registered', reg);
-    }).catch(err => {
-      console.warn('SW registration failed', err);
-    });
-  }
-  </script>
+// events
+incBtn.addEventListener('click', ()=> applyDelta(1));
+decBtn.addEventListener('click', ()=> applyDelta(-1));
+resetBtn.addEventListener('click', ()=> { if(confirm('Reset total and in-round counts?')){ state.totalCount=0; state.inRound=0; state.roundsCompleted=0; state.history.push({t:Date.now(), delta:0, totalCount:0, inRound:0, note:'reset'}); render(); }});
+addBtn.addEventListener('click', ()=> { const n = parseInt(addBy.value); if(!isNaN(n) && n!==0){ applyDelta(n); addBy.value=''; }});
+undoBtn.addEventListener('click', undo);
+setGoalBtn.addEventListener('click', ()=> { const g=parseInt(goalInput.value); if(!g||g<=0){ state.goal=null; alert('Enter a valid goal > 0 or clear'); return; } state.goal=g; render(); });
+clearHistoryTop.addEventListener('click', ()=> { if(confirm('Clear history?')){ state.history=[]; render(); }});
+toggleAutoRoundBtn.addEventListener('click', ()=> { state.autoRound=!state.autoRound; if(state.autoRound){ const total=state.totalCount; state.roundsCompleted=Math.floor(total/state.perRound); state.inRound=total%state.perRound; } else { state.inRound = state.totalCount % state.perRound; state.roundsCompleted = Math.floor(state.totalCount/state.perRound); } render();});
+soundToggle.addEventListener('change', e => { state.sound = e.target.checked; save(); });
+hapticToggle.addEventListener('change', e => { state.haptic = e.target.checked; save(); });
+perRoundInput.addEventListener('change', ()=> { const v=parseInt(perRoundInput.value); if(v && v>0){ state.perRound=v; if(!state.autoRound){ state.roundsCompleted = Math.floor(state.totalCount/state.perRound); state.inRound = state.totalCount % state.perRound; } else { state.inRound = state.totalCount % state.perRound; } render(); }});
+
+// long-press on tap
+let lpTimer = null, lpInterval = null;
+tapBtn.addEventListener('pointerdown', (ev)=>{ ev.preventDefault(); applyDelta(1); lpTimer = setTimeout(()=> { lpInterval = setInterval(()=> applyDelta(1), 120); }, 350); });
+window.addEventListener('pointerup', ()=> { if(lpTimer) clearTimeout(lpTimer); if(lpInterval){ clearInterval(lpInterval); lpInterval = null; }});
+tapBtn.addEventListener('click', ()=> applyDelta(1));
+
+// keyboard
+window.addEventListener('keydown', (e)=> { if(e.code==='Space'){ e.preventDefault(); applyDelta(1); } if(e.code==='Backspace'){ e.preventDefault(); applyDelta(-1); }});
+
+// init
+load();
+if(!state.sessionStart) state.sessionStart = Date.now();
+render();
+
+// autoresume audio
+['click','touchstart','keydown'].forEach(evt => { window.addEventListener(evt, function resume(){ if(AudioCtx && AudioCtx.state === 'suspended') AudioCtx.resume(); window.removeEventListener(evt, resume); }); });
+
+// register service worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/service-worker.js').then(reg => console.log('SW registered', reg)).catch(err => console.warn('SW failed', err));
+}
+</script>
 </body>
 </html>
